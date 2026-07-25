@@ -19,7 +19,7 @@ import { toClientAvmSigner } from "@x402/avm";
 import { CHAINS } from "../src/config";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const secretsPath = join(here, "..", ".secrets", "testnet-account.json");
+const secretsPath = join(here, "..", ".secrets", "testnet-buyer.json");
 
 const url = process.argv[2] ?? "http://localhost:8787/trust?domain=blockrun.ai";
 

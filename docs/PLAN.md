@@ -15,7 +15,7 @@ competitor has $21 settled; the 6-listing leader has $176).
 
 | Phase | When | Exit criterion |
 |---|---|---|
-| P0 testnet | Jul 25–29 | smoke-client pays the gateway end-to-end on testnet; settle-after-handler confirmed |
+| P0 testnet | ✅ done Jul 25 | 2 real settlements via GoPlausible (e.g. tx 5JLDXIR6KXJS4WM3KY6INY7GYCZW7IFB7POPKBXHA57HR6MUXZOA, $0.005 USDC buyer→merchant); kill-switch 503s with zero debit |
 | P1 mainnet | Jul 30–Aug 3 | first real settlement; Bazaar listing with challenge tag; merchant page enriched |
 | P2 scale | Aug 4–15 | ~50 wrapped routes + /trust + /precheck live; SDK (`roam402` npm) published; receipts page |
 | P3 demand | Aug–Sep | entrant outreach (they need services), Foundation/GoPlausible amplification, origin-seller co-marketing, observatory Algorand lane |
