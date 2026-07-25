@@ -15,7 +15,7 @@ export interface WrappedRoute {
   service: string;
   /** Agents-Trust trust tier at generation time. */
   tier: string;
-  method: "GET";
+  method: "GET" | "POST";
   originUrl: string;
   originPriceUsd: number;
   /** Our price (origin × margin + fee) — precomputed at generation. */

@@ -38,22 +38,30 @@ export function makePayingFetch(wallet: PrivateKeyAccount): typeof fetch {
 
 /**
  * Call the origin endpoint, paying if challenged.
- * Query string from the buyer's request is forwarded verbatim.
+ * Query string and (for POST) the JSON body are forwarded verbatim.
  */
 export async function callOrigin(
   payingFetch: typeof fetch,
   originUrl: string,
   incomingQuery: string,
-  originChain: string
+  originChain: string,
+  forward?: { method: "GET" | "POST"; body?: string | null; contentType?: string | null }
 ): Promise<OriginResult> {
   const url = incomingQuery
     ? `${originUrl}${originUrl.includes("?") ? "&" : "?"}${incomingQuery}`
     : originUrl;
 
+  const method = forward?.method ?? "GET";
   const res = await payingFetch(url, {
-    method: "GET",
+    method,
     signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS),
-    headers: { Accept: "application/json, */*" },
+    headers: {
+      Accept: "application/json, */*",
+      ...(method === "POST"
+        ? { "Content-Type": forward?.contentType ?? "application/json" }
+        : {}),
+    },
+    ...(method === "POST" && forward?.body != null ? { body: forward.body } : {}),
   });
 
   if (!res.ok) throw originError(res.status);

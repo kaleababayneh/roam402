@@ -50,7 +50,9 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   app.use("*", buildGuard(cfg, wallet !== null));
   app.use("*", await buildPaymentMiddleware(cfg));
   mountNativeRoutes(app);
-  app.get("/r/:slug", buildWrappedHandler(payingFetch));
+  const wrapped = buildWrappedHandler(payingFetch);
+  app.get("/r/:slug", wrapped);
+  app.post("/r/:slug", wrapped);
 
   log("runtime_built", { network: cfg.network, wallet: wallet !== null });
   return { app, cfg };

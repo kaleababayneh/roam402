@@ -45,7 +45,7 @@ function buildRouteConfig(cfg: Config): RoutesConfig {
   const routes: Record<string, RouteConfig> = {};
 
   for (const r of catalog.routes) {
-    routes[`GET /r/${r.slug}`] = {
+    routes[`${r.method} /r/${r.slug}`] = {
       accepts: accepts(cfg, r.roamPriceUsd),
       description: r.description,
       mimeType: "application/json",

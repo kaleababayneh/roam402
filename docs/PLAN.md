@@ -33,8 +33,12 @@ competitor has $21 settled; the 6-listing leader has $176).
 
 ## Open items
 
-- [ ] Organizer confirmation (Discord): cross-chain fulfilment + third-party
-      API resale is an acceptable orchestrator/composite entry.
+- [x] Organizer confirmation (Discord, 2026-07-25): **YES** to cross-chain
+      fulfilment and **YES** to wrapping third-party public x402 APIs.
+      Their one requirement: **a single Algorand address** for the whole
+      entry so tracking is easy — which is our Composite design already.
+      HARD CONSTRAINT: never introduce a second payTo.
+- [x] Challenge registration submitted (2026-07-25).
 - [ ] Domain purchase + NFD registration.
 - [ ] Mainnet payTo + Base float (human steps — docs/RUNBOOK.md).
 - [ ] Phase-2: Solana-side fulfilment; per-route input schemas

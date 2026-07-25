@@ -22,6 +22,8 @@ const MAX_ROUTES = 50;
 const MAX_PER_SERVICE = 3;
 const PRICE_CAP_USD = 1.0;
 const TIER_RANK: Record<string, number> = { Corroborated: 3, Established: 2 };
+/** Proven demand qualifies regardless of tier — buyers vote with USDC. */
+const VOLUME_QUALIFY_30D_USD = 100;
 
 // Margin model — MUST match src/pricing.ts (duplicated here so the script
 // stays runnable standalone; the committed output is the contract).
@@ -51,7 +53,7 @@ interface WrappedRoute {
   slug: string;
   service: string;
   tier: string;
-  method: "GET";
+  method: "GET" | "POST";
   originUrl: string;
   originPriceUsd: number;
   roamPriceUsd: number;
@@ -98,7 +100,7 @@ async function main(): Promise<void> {
   const rows = await q<LbRow[]>("/q/leaderboard");
 
   const candidates = rows
-    .filter((r) => TIER_RANK[r.trust_tier] !== undefined)
+    .filter((r) => TIER_RANK[r.trust_tier] !== undefined || num(r.verified_last_30d_volume) >= VOLUME_QUALIFY_30D_USD)
     .sort(
       (a, b) =>
         num(b.verified_last_30d_volume) - num(a.verified_last_30d_volume) ||
@@ -128,18 +130,46 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const picked = eps
+    // https-normalise, then dedupe by host+path (method-agnostic — catalogs
+    // carry http/https and null-method duplicates of the same interface).
+    // Preference: an explicitly-declared method beats a null-method row
+    // (it is the real interface), then the cheaper price wins.
+    const seen = new Map<string, RawEndpoint>();
+    for (const ep of eps) {
+      if (!ep.url) continue;
+      const url = ep.url.replace(/^http:\/\//, "https://");
+      let key: string;
+      try {
+        const u = new URL(url);
+        key = `${u.host}${u.pathname}`;
+      } catch {
+        continue;
+      }
+      const prev = seen.get(key);
+      const better =
+        !prev ||
+        (!!ep.catalog_method && !prev.catalog_method) ||
+        (!!ep.catalog_method === !!prev.catalog_method &&
+          (ep.price_usd ?? Infinity) < (prev.price_usd ?? Infinity));
+      if (better) seen.set(key, { ...ep, url });
+    }
+    const picked = [...seen.values()]
       .filter(
         (ep) =>
-          ep.url &&
-          (ep.catalog_method ?? "GET") === "GET" &&
+          ["GET", "POST"].includes((ep.catalog_method ?? "GET").toUpperCase()) &&
           typeof ep.price_usd === "number" &&
           ep.price_usd > 0 &&
           ep.price_usd <= PRICE_CAP_USD &&
           ep.is_live === true &&
           isBaseSide(ep)
       )
-      .sort((a, b) => (b.price_usd ?? 0) - (a.price_usd ?? 0)) // most valuable first
+      // Explicitly-declared interfaces first (the service's real product,
+      // e.g. POST /chat/completions), then price desc within each group.
+      .sort(
+        (a, b) =>
+          Number(!!b.catalog_method) - Number(!!a.catalog_method) ||
+          (b.price_usd ?? 0) - (a.price_usd ?? 0)
+      )
       .slice(0, MAX_PER_SERVICE);
 
     for (const ep of picked) {
@@ -148,7 +178,7 @@ async function main(): Promise<void> {
         slug: slugify(row.domain, ep.url!, taken),
         service: row.domain,
         tier: row.trust_tier,
-        method: "GET",
+        method: (ep.catalog_method ?? "GET").toUpperCase() === "POST" ? "POST" : "GET",
         originUrl: ep.url!,
         originPriceUsd: ep.price_usd!,
         roamPriceUsd: roamPriceUsd(ep.price_usd!),

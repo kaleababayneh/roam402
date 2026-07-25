@@ -57,7 +57,15 @@ export function buildWrappedHandler(payingFetch: typeof fetch) {
     const query = c.req.url.split("?")[1] ?? "";
     const started = Date.now();
     try {
-      const { response, receipt } = await callOrigin(payingFetch, route.originUrl, query, ORIGIN_CHAIN);
+      const forward =
+        route.method === "POST"
+          ? {
+              method: "POST" as const,
+              body: await c.req.text(),
+              contentType: c.req.header("content-type") ?? "application/json",
+            }
+          : { method: "GET" as const };
+      const { response, receipt } = await callOrigin(payingFetch, route.originUrl, query, ORIGIN_CHAIN, forward);
       recordSuccess(slug);
       log("wrapped_ok", { slug, service: route.service, ms: Date.now() - started });
       return withReceiptHeaders(response, {
