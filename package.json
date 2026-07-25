@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json",
     "catalog:generate": "tsx scripts/generate-catalog.ts",
     "account:new": "tsx scripts/new-account.ts",
-    "smoke": "tsx scripts/smoke-client.ts"
+    "smoke": "tsx scripts/smoke-client.ts",
+    "optin": "tsx scripts/optin.ts"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",
