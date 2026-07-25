@@ -5,6 +5,12 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "license": "MIT",
   "keywords": ["x402", "algorand", "agents", "payments", "usdc", "roam402", "agents-trust"],
   "homepage": "https://agents-trust.com",

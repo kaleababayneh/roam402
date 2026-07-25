@@ -1,5 +1,5 @@
 {
-  "name": "roam402",
+  "name": "roam402-gateway",
   "version": "0.1.0",
   "private": true,
   "description": "Roam402 \u2014 the x402 roaming gateway. Every verified x402 service, payable in USDC on Algorand. By Agents-Trust.",
@@ -11,7 +11,8 @@
     "catalog:generate": "tsx scripts/generate-catalog.ts",
     "account:new": "tsx scripts/new-account.ts",
     "smoke": "tsx scripts/smoke-client.ts",
-    "optin": "tsx scripts/optin.ts"
+    "optin": "tsx scripts/optin.ts",
+    "mcp": "tsx mcp/src/index.ts"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",
