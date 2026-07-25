@@ -1,0 +1,8 @@
+# Copy to .dev.vars for local `wrangler dev`. NEVER commit .dev.vars.
+NETWORK=testnet
+PAY_TO_ADDRESS=
+FACILITATOR_URL=https://facilitator.goplausible.xyz
+KILL_SWITCH=off
+PER_REQUEST_CAP_USD=1.00
+# Base hot wallet private key (0x…) — pays origin services. Fund modestly.
+BASE_WALLET_PRIVATE_KEY=

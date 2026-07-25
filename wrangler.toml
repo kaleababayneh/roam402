@@ -1,0 +1,19 @@
+name = "roam402"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ── Environment ───────────────────────────────────────────────────────────────
+# NETWORK selects every chain constant in src/config.ts. Ship testnet by
+# default; the mainnet cutover is a single var flip + payTo change (see
+# docs/RUNBOOK.md). The payTo address is PERMANENT for the whole competition —
+# the leaderboard attributes the merchant by it.
+#
+# Secrets (never in this file, set via `wrangler secret put`):
+#   BASE_WALLET_PRIVATE_KEY — hot wallet that pays origin services on Base.
+[vars]
+NETWORK = "testnet"
+PAY_TO_ADDRESS = ""                       # set after account creation (RUNBOOK step 1)
+FACILITATOR_URL = "https://facilitator.goplausible.xyz"
+KILL_SWITCH = "off"                       # "on" → every paid route returns 503
+PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
