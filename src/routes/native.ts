@@ -7,6 +7,8 @@
  */
 
 import { Hono } from "hono";
+import { declareDiscoveryExtension } from "@x402/extensions";
+import type { RouteConfig } from "@x402/core/server";
 import { GatewayError } from "../lib/errors";
 
 const AGENTS_TRUST_API = "https://api.agents-trust.ai";
@@ -15,6 +17,8 @@ export interface NativeRoute {
   path: string;
   priceUsd: number;
   description: string;
+  /** Bazaar discovery declaration — makes the catalog entry self-describing. */
+  discovery: Record<string, unknown>;
 }
 
 export const NATIVE_ROUTES: NativeRoute[] = [
@@ -23,14 +27,42 @@ export const NATIVE_ROUTES: NativeRoute[] = [
     priceUsd: 0.005,
     description:
       "Trust report for an x402 seller domain: Agents-Trust tier (Corroborated/Established/Emerging/Listed), 0-100 score, and evidence pillars from $45M+ of indexed on-chain settlement. Query: ?domain=example.com",
+    discovery: declareDiscoveryExtension({
+      input: { domain: "blockrun.ai" },
+      inputSchema: {
+        type: "object",
+        required: ["domain"],
+        properties: { domain: { type: "string", description: "x402 seller domain to look up" } },
+      },
+      output: {
+        example: { domain: "blockrun.ai", found: true, trust_tier: "Emerging", trust_score: 0.857 },
+      },
+    }),
   },
   {
     path: "/precheck",
     priceUsd: 0.002,
     description:
       "Pre-flight safety check before your agent pays an unknown x402 endpoint: known-seller match, trust tier, liveness, and price sanity vs catalogued price. Query: ?url=https://…",
+    discovery: declareDiscoveryExtension({
+      input: { url: "https://blockrun.ai/api/v1/chat/completions" },
+      inputSchema: {
+        type: "object",
+        required: ["url"],
+        properties: { url: { type: "string", description: "Full x402 endpoint URL to vet before paying" } },
+      },
+      output: {
+        example: { url: "https://…", known_seller: true, trust_tier: "Emerging", verdict: "known seller — see trust_tier before paying" },
+      },
+    }),
   },
 ];
+
+/** Native routes as x402 RouteConfig extensions (merged with signed receipts). */
+export function nativeRouteExtensions(path: string): RouteConfig["extensions"] {
+  const route = NATIVE_ROUTES.find((r) => r.path === path);
+  return route?.discovery as RouteConfig["extensions"];
+}
 
 async function fetchAgentsTrust(path: string): Promise<unknown> {
   const res = await fetch(`${AGENTS_TRUST_API}${path}`, {

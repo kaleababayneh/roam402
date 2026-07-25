@@ -26,6 +26,7 @@ import { mountReceipts } from "./routes/receipts";
 import { mountStats } from "./routes/stats";
 import { mountPlayground } from "./routes/playground";
 import { makeReceiptStore } from "./receipts/store";
+import { runHealthSweep } from "./fulfillment/health";
 import { GatewayError } from "./lib/errors";
 import { log } from "./lib/log";
 
@@ -57,7 +58,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   mountStats(app);
   mountReceipts(app, receipts);
   mountFreeRoutes(app, cfg, wallet !== null);
-  app.use("*", buildGuard(cfg, wallet !== null));
+  app.use("*", buildGuard(cfg, wallet !== null, env.RECEIPTS));
   app.use("*", await buildPaymentMiddleware(cfg));
   mountNativeRoutes(app);
   const wrapped = buildWrappedHandler(payingFetch, receipts);
@@ -69,6 +70,11 @@ async function buildRuntime(env: Env): Promise<Runtime> {
 }
 
 export default {
+  /** Cron: probe every origin unpaid (402 = alive) and persist verdicts. */
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    if (env.RECEIPTS) await runHealthSweep(env.RECEIPTS);
+  },
+
   async fetch(request: Request, env: Env): Promise<Response> {
     // Isolate-lifetime memo — the x402 server (incl. its facilitator
     // initialize() round-trip) is built once, inside request context as

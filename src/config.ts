@@ -45,8 +45,10 @@ export interface Env {
   PER_REQUEST_CAP_USD: string;
   /** Secret — Base hot wallet that pays origin services. */
   BASE_WALLET_PRIVATE_KEY?: string;
-  /** Optional KV binding — public receipts log (see src/receipts/store.ts). */
+  /** Optional KV binding — receipts log + route health (see src/receipts/store.ts). */
   RECEIPTS?: KVNamespace;
+  /** Secret — Ed25519 private JWK enabling signed offers/receipts. */
+  RECEIPT_SIGNING_JWK?: string;
 }
 
 export interface Config {
@@ -56,6 +58,8 @@ export interface Config {
   facilitatorUrl: string;
   killSwitch: boolean;
   perRequestCapUsd: number;
+  /** Ed25519 private JWK (JSON) — signed receipts feature flag + key. */
+  receiptSigningJwk?: string;
 }
 
 export function loadConfig(env: Env): Config {
@@ -67,5 +71,6 @@ export function loadConfig(env: Env): Config {
     facilitatorUrl: env.FACILITATOR_URL || "https://facilitator.goplausible.xyz",
     killSwitch: env.KILL_SWITCH === "on",
     perRequestCapUsd: Number.parseFloat(env.PER_REQUEST_CAP_USD || "1") || 1,
+    receiptSigningJwk: env.RECEIPT_SIGNING_JWK,
   };
 }

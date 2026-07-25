@@ -12,7 +12,9 @@
     "account:new": "tsx scripts/new-account.ts",
     "smoke": "tsx scripts/smoke-client.ts",
     "optin": "tsx scripts/optin.ts",
-    "mcp": "tsx mcp/src/index.ts"
+    "mcp": "tsx mcp/src/index.ts",
+    "receipt:key": "tsx scripts/new-receipt-key.ts",
+    "verify:receipt": "tsx scripts/verify-receipt.ts"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",

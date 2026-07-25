@@ -43,3 +43,23 @@ competitor has $21 settled; the 6-listing leader has $176).
 - [ ] Mainnet payTo + Base float (human steps — docs/RUNBOOK.md).
 - [ ] Phase-2: Solana-side fulfilment; per-route input schemas
       (declareDiscoveryExtension) for richer Bazaar entries.
+
+
+## Tier 2 (finalist-grade, done Jul 25)
+
+- [x] **Signed receipts** — EdDSA/Ed25519 JWS offers + receipts (did:jwk,
+      key inline in kid, WebCrypto). Proven: a real paid receipt VERIFIES
+      against its embedded public key (pnpm verify:receipt) — payer,
+      network, resourceUrl all cryptographically attested. Feature-flagged
+      on RECEIPT_SIGNING_JWK.
+- [x] **Self-healing catalog** — cron sweep probes every origin UNPAID
+      (402 = alive, no spend), persists verdicts to KV; the guard refuses
+      "down" routes before payment. 30-min cron (enable at deploy).
+- [x] **Bazaar discovery schemas** — declareDiscoveryExtension on native
+      routes (input/inputSchema/output) → richest merchant catalog entries.
+- [~] **Streaming passthrough** — DEFERRED: the x402 hono middleware
+      buffers the response body (res.clone().arrayBuffer()) to settle
+      after delivery, so SSE can't stream through the paid path. Buffering
+      is the CORRECT tradeoff (settlement must succeed before we commit the
+      response — a stream can't be un-sent). Not a bug to fix; a protocol
+      property to document.

@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import algosdk from "algosdk";
 import { x402Client } from "@x402/core/client";
 import { wrapFetchWithPayment } from "@x402/fetch";
+import { extractReceiptFromResponse, extractJWSPayload } from "@x402/extensions";
 import { ExactAvmScheme } from "@x402/avm/exact/client";
 import { toClientAvmSigner } from "@x402/avm";
 import { CHAINS } from "../src/config";
@@ -36,7 +37,17 @@ const payingFetch = wrapFetchWithPayment(fetch, client);
 
 const res = await payingFetch(url, { headers: { Accept: "application/json" } });
 console.log(`HTTP ${res.status}`);
-console.log("X-PAYMENT-RESPONSE:", res.headers.get("X-PAYMENT-RESPONSE")?.slice(0, 80) ?? "(none)");
+console.log("PAYMENT-RESPONSE:", (res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("X-PAYMENT-RESPONSE"))?.slice(0, 60) ?? "(none)");
+const receipt = extractReceiptFromResponse(res);
+if (receipt) {
+  console.log("SIGNED RECEIPT (JWS):", String((receipt as { jws?: string }).jws ?? JSON.stringify(receipt)).slice(0, 90) + "…");
+  try {
+    const payload = extractJWSPayload(String((receipt as { jws?: string }).jws));
+    console.log("receipt payload:", JSON.stringify(payload).slice(0, 220));
+  } catch { /* non-JWS receipt shape — printed raw above */ }
+} else {
+  console.log("SIGNED RECEIPT: (none)");
+}
 for (const h of ["X-Roam-Service", "X-Roam-Trust-Tier", "X-Roam-Origin-Chain", "X-Roam-Origin-Receipt"]) {
   const v = res.headers.get(h);
   if (v) console.log(`${h}:`, v.slice(0, 80));

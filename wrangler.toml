@@ -23,3 +23,8 @@ PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
 # [[kv_namespaces]]
 # binding = "RECEIPTS"
 # id = "<paste-id>"
+
+# ── Self-healing catalog (enable with the KV binding above at deploy) ────────
+# Probes every origin unpaid every 30 min; "down" routes refuse before payment.
+# [triggers]
+# crons = ["*/30 * * * *"]

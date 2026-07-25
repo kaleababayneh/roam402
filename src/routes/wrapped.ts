@@ -18,6 +18,7 @@ import type { Config } from "../config";
 import { findRoute } from "../catalog";
 import { callOrigin } from "../fulfillment/origin";
 import { isOpen, recordFailure, recordSuccess } from "../fulfillment/breaker";
+import { isOriginDown } from "../fulfillment/health";
 import { withReceiptHeaders } from "../payment/receipts";
 import { GatewayError, breakerOpenError, killSwitchError, spendCapError } from "../lib/errors";
 import { log } from "../lib/log";
@@ -26,7 +27,7 @@ import type { ReceiptStore } from "../receipts/store";
 /** Origin chain label for receipts — phase 1 fulfils on Base only. */
 const ORIGIN_CHAIN = "eip155:8453";
 
-export function buildGuard(cfg: Config, hasWallet: boolean): MiddlewareHandler {
+export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | undefined): MiddlewareHandler {
   return async (c, next) => {
     const path = c.req.path;
     const isPaid = path.startsWith("/r/") || path === "/trust" || path === "/precheck";
@@ -39,6 +40,7 @@ export function buildGuard(cfg: Config, hasWallet: boolean): MiddlewareHandler {
       const route = findRoute(slug);
       if (!route) throw new GatewayError(`Unknown route /r/${slug}`, 404, "unknown_route");
       if (isOpen(slug)) throw breakerOpenError(slug);
+      if (await isOriginDown(kv, slug)) throw breakerOpenError(slug);
       if (!hasWallet) throw new GatewayError("Gateway fulfilment wallet not configured", 503, "no_wallet");
       if (route.originPriceUsd > cfg.perRequestCapUsd) {
         throw spendCapError(route.originPriceUsd, cfg.perRequestCapUsd);
