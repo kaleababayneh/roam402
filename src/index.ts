@@ -22,6 +22,8 @@ import { buildGuard, buildWrappedHandler } from "./routes/wrapped";
 import { mountNativeRoutes } from "./routes/native";
 import { mountFreeRoutes } from "./routes/free";
 import { mountLanding } from "./routes/landing";
+import { mountReceipts } from "./routes/receipts";
+import { makeReceiptStore } from "./receipts/store";
 import { GatewayError } from "./lib/errors";
 import { log } from "./lib/log";
 
@@ -37,6 +39,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   const wallet = loadBaseWallet(env.BASE_WALLET_PRIVATE_KEY);
   const payingFetch = wallet ? makePayingFetch(wallet) : fetch;
 
+  const receipts = makeReceiptStore(env.RECEIPTS);
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -48,11 +51,12 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   });
 
   mountLanding(app, cfg);
+  mountReceipts(app, receipts);
   mountFreeRoutes(app, cfg, wallet !== null);
   app.use("*", buildGuard(cfg, wallet !== null));
   app.use("*", await buildPaymentMiddleware(cfg));
   mountNativeRoutes(app);
-  const wrapped = buildWrappedHandler(payingFetch);
+  const wrapped = buildWrappedHandler(payingFetch, receipts);
   app.get("/r/:slug", wrapped);
   app.post("/r/:slug", wrapped);
 

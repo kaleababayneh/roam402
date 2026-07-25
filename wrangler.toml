@@ -17,3 +17,9 @@ PAY_TO_ADDRESS = ""                       # set after account creation (RUNBOOK 
 FACILITATOR_URL = "https://facilitator.goplausible.xyz"
 KILL_SWITCH = "off"                       # "on" → every paid route returns 503
 PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
+
+# ── Receipts log (optional, recommended before mainnet) ──────────────────────
+# wrangler kv namespace create RECEIPTS   → paste the id below, uncomment.
+# [[kv_namespaces]]
+# binding = "RECEIPTS"
+# id = "<paste-id>"

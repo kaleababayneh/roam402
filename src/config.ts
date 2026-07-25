@@ -45,6 +45,8 @@ export interface Env {
   PER_REQUEST_CAP_USD: string;
   /** Secret — Base hot wallet that pays origin services. */
   BASE_WALLET_PRIVATE_KEY?: string;
+  /** Optional KV binding — public receipts log (see src/receipts/store.ts). */
+  RECEIPTS?: KVNamespace;
 }
 
 export interface Config {

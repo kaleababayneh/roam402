@@ -21,6 +21,7 @@ import { isOpen, recordFailure, recordSuccess } from "../fulfillment/breaker";
 import { withReceiptHeaders } from "../payment/receipts";
 import { GatewayError, breakerOpenError, killSwitchError, spendCapError } from "../lib/errors";
 import { log } from "../lib/log";
+import type { ReceiptStore } from "../receipts/store";
 
 /** Origin chain label for receipts — phase 1 fulfils on Base only. */
 const ORIGIN_CHAIN = "eip155:8453";
@@ -47,7 +48,7 @@ export function buildGuard(cfg: Config, hasWallet: boolean): MiddlewareHandler {
   };
 }
 
-export function buildWrappedHandler(payingFetch: typeof fetch) {
+export function buildWrappedHandler(payingFetch: typeof fetch, receipts: ReceiptStore) {
   return async (c: Context): Promise<Response> => {
     const slug = c.req.param("slug") ?? "";
     const route = findRoute(slug);
@@ -68,6 +69,15 @@ export function buildWrappedHandler(payingFetch: typeof fetch) {
       const { response, receipt } = await callOrigin(payingFetch, route.originUrl, query, ORIGIN_CHAIN, forward);
       recordSuccess(slug);
       log("wrapped_ok", { slug, service: route.service, ms: Date.now() - started });
+      await receipts.record({
+        ts: new Date().toISOString(),
+        route: `/r/${slug}`,
+        service: route.service,
+        method: route.method,
+        priceUsd: route.roamPriceUsd,
+        originReceipt: receipt.paymentResponse,
+        originChain: receipt.chain,
+      });
       return withReceiptHeaders(response, {
         service: route.service,
         tier: route.tier,

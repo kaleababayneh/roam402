@@ -1,8 +1,16 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node",
+      "@cloudflare/workers-types"
+    ],
     "module": "ESNext"
   },
-  "include": ["scripts/**/*.ts", "src/**/*.ts"]
+  "include": [
+    "scripts/**/*.ts",
+    "src/**/*.ts",
+    "sdk/src/**/*.ts",
+    "examples/**/*.ts"
+  ]
 }
