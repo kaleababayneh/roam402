@@ -23,6 +23,8 @@ import { mountNativeRoutes } from "./routes/native";
 import { mountFreeRoutes } from "./routes/free";
 import { mountLanding } from "./routes/landing";
 import { mountReceipts } from "./routes/receipts";
+import { mountStats } from "./routes/stats";
+import { mountPlayground } from "./routes/playground";
 import { makeReceiptStore } from "./receipts/store";
 import { GatewayError } from "./lib/errors";
 import { log } from "./lib/log";
@@ -51,6 +53,8 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   });
 
   mountLanding(app, cfg);
+  mountPlayground(app, cfg);
+  mountStats(app);
   mountReceipts(app, receipts);
   mountFreeRoutes(app, cfg, wallet !== null);
   app.use("*", buildGuard(cfg, wallet !== null));
