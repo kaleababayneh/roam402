@@ -21,6 +21,7 @@ import { makePayingFetch } from "./fulfillment/origin";
 import { buildGuard, buildWrappedHandler } from "./routes/wrapped";
 import { mountNativeRoutes } from "./routes/native";
 import { mountFreeRoutes } from "./routes/free";
+import { mountLanding } from "./routes/landing";
 import { GatewayError } from "./lib/errors";
 import { log } from "./lib/log";
 
@@ -46,6 +47,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
     return c.json({ error: "internal", message: "Unexpected gateway error" }, 500);
   });
 
+  mountLanding(app, cfg);
   mountFreeRoutes(app, cfg, wallet !== null);
   app.use("*", buildGuard(cfg, wallet !== null));
   app.use("*", await buildPaymentMiddleware(cfg));
