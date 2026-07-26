@@ -12,6 +12,7 @@
  */
 
 import { Hono } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
@@ -205,7 +206,7 @@ Operated by Agents-Trust (https://agents-trust.com) — the observatory
 indexing $45M+ of real x402 settlement.
 `;
 
-export function mountLanding(app: Hono, cfg: Config): void {
+export function mountLanding(app: Hono<AppEnv>, cfg: Config): void {
   app.get("/", (c) => c.html(page(cfg)));
   app.get("/llms.txt", (c) => c.text(LLMS_TXT(catalog.routes.length)));
   app.get("/.well-known/agents.json", (c) =>

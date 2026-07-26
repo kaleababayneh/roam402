@@ -8,6 +8,7 @@
  */
 
 import { Hono } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 
 const DISCOVERY_URL = "https://facilitator.goplausible.xyz/discovery/resources?limit=500";
 const CACHE_MS = 5 * 60 * 1000;
@@ -68,7 +69,7 @@ function aggregate(items: DiscoveryItem[]): ChallengeStats {
   };
 }
 
-export function mountStats(app: Hono): void {
+export function mountStats(app: Hono<AppEnv>): void {
   app.get("/api/challenge-stats", async (c) => {
     if (!cache || Date.now() - cache.at > CACHE_MS) {
       const res = await fetch(DISCOVERY_URL, { headers: { Accept: "application/json" } });

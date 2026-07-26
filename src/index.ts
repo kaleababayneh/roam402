@@ -19,6 +19,7 @@ import { buildPaymentMiddleware } from "./payment/server";
 import { loadBaseWallet } from "./fulfillment/wallet";
 import { makePayingFetch } from "./fulfillment/origin";
 import { buildGuard, buildWrappedHandler } from "./routes/wrapped";
+import type { AppEnv } from "./lib/appEnv";
 import { mountNativeRoutes } from "./routes/native";
 import { mountFreeRoutes } from "./routes/free";
 import { mountLanding } from "./routes/landing";
@@ -31,7 +32,7 @@ import { GatewayError } from "./lib/errors";
 import { log } from "./lib/log";
 
 interface Runtime {
-  app: Hono;
+  app: Hono<AppEnv>;
   cfg: Config;
 }
 
@@ -43,25 +44,36 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   const payingFetch = wallet ? makePayingFetch(wallet) : fetch;
 
   const receipts = makeReceiptStore(env.RECEIPTS);
-  const app = new Hono();
+  const app = new Hono<AppEnv>();
+
+  // Correlation id: on every log line and every response header, so any
+  // failed call is reconstructable from either side.
+  app.use("*", async (c, next) => {
+    const rid = crypto.randomUUID().slice(0, 8);
+    c.set("rid", rid);
+    await next();
+    c.res.headers.set("X-Roam-Request", rid);
+  });
 
   app.onError((err, c) => {
+    const rid = c.get("rid");
     if (err instanceof GatewayError) {
-      return c.json({ error: err.code, message: err.message, retryable: err.retryable }, err.status as 400);
+      log("gateway_error", { rid, code: err.code, status: err.status });
+      return c.json({ error: err.code, message: err.message, retryable: err.retryable, request: rid }, err.status as 400);
     }
-    log("unhandled_error", { message: err instanceof Error ? err.message : String(err) });
-    return c.json({ error: "internal", message: "Unexpected gateway error" }, 500);
+    log("unhandled_error", { rid, message: err instanceof Error ? err.message : String(err) });
+    return c.json({ error: "internal", message: "Unexpected gateway error", request: rid }, 500);
   });
 
   mountLanding(app, cfg);
   mountPlayground(app, cfg);
   mountStats(app);
   mountReceipts(app, receipts);
-  mountFreeRoutes(app, cfg, wallet !== null);
+  mountFreeRoutes(app, cfg, wallet !== null, env.RECEIPTS);
   app.use("*", buildGuard(cfg, wallet !== null, env.RECEIPTS));
   app.use("*", await buildPaymentMiddleware(cfg));
   mountNativeRoutes(app, cfg, env.RECEIPTS);
-  const wrapped = buildWrappedHandler(payingFetch, receipts, cfg);
+  const wrapped = buildWrappedHandler(payingFetch, receipts, cfg, env.RECEIPTS);
   app.get("/r/:slug", wrapped);
   app.post("/r/:slug", wrapped);
 

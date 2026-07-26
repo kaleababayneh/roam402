@@ -13,6 +13,7 @@
  */
 
 import { Hono } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
@@ -173,6 +174,6 @@ $("pay").addEventListener("click", async () => {
 </div></body></html>`;
 }
 
-export function mountPlayground(app: Hono, cfg: Config): void {
+export function mountPlayground(app: Hono<AppEnv>, cfg: Config): void {
   app.get("/playground", (c) => c.html(page(cfg)));
 }

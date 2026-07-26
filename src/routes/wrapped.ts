@@ -13,6 +13,7 @@
  */
 
 import type { Context, MiddlewareHandler } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 import type { PrivateKeyAccount } from "viem/accounts";
 import type { Config } from "../config";
 import { findRoute } from "../catalog";
@@ -24,7 +25,7 @@ import { GatewayError, breakerOpenError, killSwitchError, spendCapError } from "
 import { log } from "../lib/log";
 import type { ReceiptStore } from "../receipts/store";
 
-export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | undefined): MiddlewareHandler {
+export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | undefined): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const path = c.req.path;
     const isPaid = path.startsWith("/r/") || path === "/trust" || path === "/precheck" || path === "/discover";
@@ -36,7 +37,7 @@ export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | un
       const slug = path.slice(3);
       const route = findRoute(slug, cfg.testOriginUrl);
       if (!route) throw new GatewayError(`Unknown route /r/${slug}`, 404, "unknown_route");
-      if (isOpen(slug)) throw breakerOpenError(slug);
+      if (await isOpen(slug, kv)) throw breakerOpenError(slug);
       if (await isOriginDown(kv, slug)) throw breakerOpenError(slug);
       if (!hasWallet) throw new GatewayError("Gateway fulfilment wallet not configured", 503, "no_wallet");
       if (route.originPriceUsd > cfg.perRequestCapUsd) {
@@ -47,8 +48,8 @@ export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | un
   };
 }
 
-export function buildWrappedHandler(payingFetch: typeof fetch, receipts: ReceiptStore, cfg: Config) {
-  return async (c: Context): Promise<Response> => {
+export function buildWrappedHandler(payingFetch: typeof fetch, receipts: ReceiptStore, cfg: Config, kv: KVNamespace | undefined) {
+  return async (c: Context<AppEnv>): Promise<Response> => {
     const slug = c.req.param("slug") ?? "";
     const route = findRoute(slug, cfg.testOriginUrl);
     // Guard already 404'd unknown slugs; this satisfies the type system.
@@ -66,8 +67,8 @@ export function buildWrappedHandler(payingFetch: typeof fetch, receipts: Receipt
             }
           : { method: "GET" as const };
       const { response, receipt } = await callOrigin(payingFetch, route.originUrl, query, forward);
-      recordSuccess(slug);
-      log("wrapped_ok", { slug, service: route.service, ms: Date.now() - started });
+      recordSuccess(slug, kv);
+      log("wrapped_ok", { rid: c.get("rid"), slug, service: route.service, ms: Date.now() - started });
       await receipts.record({
         ts: new Date().toISOString(),
         route: `/r/${slug}`,
@@ -83,8 +84,8 @@ export function buildWrappedHandler(payingFetch: typeof fetch, receipts: Receipt
         origin: receipt,
       });
     } catch (err) {
-      recordFailure(slug);
-      log("wrapped_fail", { slug, service: route.service, ms: Date.now() - started });
+      recordFailure(slug, kv);
+      log("wrapped_fail", { rid: c.get("rid"), slug, service: route.service, ms: Date.now() - started });
       throw err; // aborts settlement — buyer is not charged
     }
   };

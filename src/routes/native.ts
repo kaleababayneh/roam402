@@ -7,6 +7,7 @@
  */
 
 import { Hono } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 import { declareDiscoveryExtension } from "@x402/extensions";
 import type { RouteConfig } from "@x402/core/server";
 import type { Config } from "../config";
@@ -92,7 +93,7 @@ async function leaderboardRows() {
 }
 
 /** Mount the native paid handlers (payment middleware runs before these). */
-export function mountNativeRoutes(app: Hono, cfg: Config, kv: KVNamespace | undefined): void {
+export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespace | undefined): void {
   app.get("/discover", (c) => c.json(catalogPayload(cfg)));
 
   app.get("/trust", async (c) => {

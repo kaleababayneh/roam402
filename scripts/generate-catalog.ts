@@ -91,7 +91,7 @@ function slugify(domain: string, url: string, taken: Set<string>): string {
 }
 
 function describe(ep: RawEndpoint, row: LbRow): string {
-  const what = (ep.description ?? "").trim() || `${row.display_name} paid API (${new URL(ep.url!).pathname})`;
+  const what = (ep.description ?? "").trim() || `${(ep.catalog_method ?? "GET").toUpperCase()} ${new URL(ep.url!).pathname} on ${row.display_name}`;
   const base = what.length > 140 ? `${what.slice(0, 137)}…` : what;
   return `${base} · via Roam402 from ${row.domain} (${row.trust_tier} on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts.`;
 }
@@ -173,8 +173,21 @@ async function main(): Promise<void> {
       )
       .slice(0, MAX_PER_SERVICE);
 
+    // Origins often reuse one service-level blurb across every endpoint;
+    // a wrong description is worse than a plain one. Keep the blurb for the
+    // FIRST endpoint that uses it, name the rest by what they are.
+    const descCount = new Map<string, number>();
+    for (const ep of picked) {
+      const d = (ep.description ?? "").trim();
+      if (d) descCount.set(d, (descCount.get(d) ?? 0) + 1);
+    }
+    const usedDesc = new Set<string>();
     for (const ep of picked) {
       if (routes.length >= MAX_ROUTES) break;
+      const d = (ep.description ?? "").trim();
+      const dup = d && (descCount.get(d) ?? 0) > 1 && usedDesc.has(d);
+      if (d) usedDesc.add(d);
+      const epForDesc = dup ? { ...ep, description: null } : ep;
       routes.push({
         slug: slugify(row.domain, ep.url!, taken),
         service: row.domain,
@@ -183,7 +196,7 @@ async function main(): Promise<void> {
         originUrl: ep.url!,
         originPriceUsd: ep.price_usd!,
         roamPriceUsd: roamPriceUsd(ep.price_usd!),
-        description: describe(ep, row),
+        description: describe(epForDesc, row),
       });
     }
     if (picked.length) console.log(`  + ${row.domain} (${row.trust_tier}) → ${picked.length} route(s)`);

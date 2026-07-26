@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T07:09:06.880Z",
+  "generatedAt": "2026-07-26T13:05:16.408Z",
   "source": "agents-trust.ai public API (q/leaderboard + q/service_detail)",
   "routes": [
     {
@@ -10,7 +10,7 @@
       "originUrl": "https://x402.quickintel.io/v1/tator/prompt",
       "originPriceUsd": 0.2,
       "roamPriceUsd": 0.2,
-      "description": "Token security scanning and AI trading APIs. Pay with USDC micropayments — no API keys, no subscriptions. · via Roam402 from quickintel.io (Listed on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /v1/tator/prompt on Quick Intel x402 Gateway | Crypto APIs for Agents · via Roam402 from quickintel.io (Listed on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "quickintel-scan-full",
@@ -20,7 +20,17 @@
       "originUrl": "https://x402.quickintel.io/v1/scan/full",
       "originPriceUsd": 0.03,
       "roamPriceUsd": 0.03,
-      "description": "Token security scanning and AI trading APIs. Pay with USDC micropayments — no API keys, no subscriptions. · via Roam402 from quickintel.io (Listed on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /v1/scan/full on Quick Intel x402 Gateway | Crypto APIs for Agents · via Roam402 from quickintel.io (Listed on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "blockrun-audio-speech",
+      "service": "blockrun.ai",
+      "tier": "Emerging",
+      "method": "POST",
+      "originUrl": "https://blockrun.ai/api/v1/audio/speech",
+      "originPriceUsd": 0.001,
+      "roamPriceUsd": 0.001,
+      "description": "Text-to-Speech (ElevenLabs) · via Roam402 from blockrun.ai (Emerging on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "blockrun-chat-completions",
@@ -30,7 +40,7 @@
       "originUrl": "https://blockrun.ai/api/v1/chat/completions",
       "originPriceUsd": 0.0001,
       "roamPriceUsd": 0.0001,
-      "description": "Routed chat completions across 55+ models (provider cost + 5%). · via Roam402 from blockrun.ai (Emerging on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "Chat Completions · via Roam402 from blockrun.ai (Emerging on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "blockrun-v1-messages",
@@ -40,17 +50,7 @@
       "originUrl": "https://blockrun.ai/api/v1/messages",
       "originPriceUsd": 0.0001,
       "roamPriceUsd": 0.0001,
-      "description": "Anthropic-compatible messages endpoint. · via Roam402 from blockrun.ai (Emerging on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "blockrun-sandbox-exec",
-      "service": "blockrun.ai",
-      "tier": "Emerging",
-      "method": "GET",
-      "originUrl": "https://blockrun.ai/api/v1/modal/sandbox/exec",
-      "originPriceUsd": 0.001,
-      "roamPriceUsd": 0.001,
-      "description": "Pay-per-call AI gateway. Models, data, runtime — one endpoint, no API keys, settled in USDC on Base &amp; Solana. One install for OpenCla… · via Roam402 from blockrun.ai (Emerging on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "Anthropic Messages · via Roam402 from blockrun.ai (Emerging on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "dtelecom-v1-session",
@@ -70,7 +70,7 @@
       "originUrl": "https://x402stt.dtelecom.org/v1/session/extend",
       "originPriceUsd": 0.025,
       "roamPriceUsd": 0.025,
-      "description": "Real-time speech-to-text · via Roam402 from dtelecom.org (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /v1/session/extend on Dtelecom · via Roam402 from dtelecom.org (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "anyspend-ads-buy",
@@ -80,7 +80,7 @@
       "originUrl": "https://x402.anyspend.com/ads/buy",
       "originPriceUsd": 0.1,
       "roamPriceUsd": 0.1,
-      "description": "Ad Slot Booking · via Roam402 from anyspend.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /ads/buy on Anyspend · via Roam402 from anyspend.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "clashofcoins-x402-fund",
@@ -100,7 +100,7 @@
       "originUrl": "https://x402.clashofcoins.com/shop/x402/buy",
       "originPriceUsd": 0.09,
       "roamPriceUsd": 0.09,
-      "description": "Low-cost gateway health probe for real x402 settlement checks · via Roam402 from clashofcoins.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /shop/x402/buy on Clashofcoins · via Roam402 from clashofcoins.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "clashofcoins-x402-cheap-health",
@@ -110,7 +110,7 @@
       "originUrl": "https://x402.clashofcoins.com/x402/cheap-health",
       "originPriceUsd": 0.001,
       "roamPriceUsd": 0.001,
-      "description": "Low-cost gateway health probe for real x402 settlement checks · via Roam402 from clashofcoins.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /x402/cheap-health on Clashofcoins · via Roam402 from clashofcoins.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "minebean-strategy-decide",
@@ -120,27 +120,7 @@
       "originUrl": "https://api.minebean.com/api/strategy/decide",
       "originPriceUsd": 0.1,
       "roamPriceUsd": 0.1,
-      "description": "MineBean paid API (/api/strategy/decide) · via Roam402 from minebean.com (Unrated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "enrichx402-exa-search",
-      "service": "enrichx402.com",
-      "tier": "Corroborated",
-      "method": "POST",
-      "originUrl": "https://enrichx402.com/api/exa/search",
-      "originPriceUsd": 0.01,
-      "roamPriceUsd": 0.01,
-      "description": "Exa Contents - Retrieve content from URLs · via Roam402 from enrichx402.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "enrichx402-exa-contents",
-      "service": "enrichx402.com",
-      "tier": "Corroborated",
-      "method": "POST",
-      "originUrl": "https://enrichx402.com/api/exa/contents",
-      "originPriceUsd": 0.002,
-      "roamPriceUsd": 0.002,
-      "description": "Exa Contents - Retrieve content from URLs · via Roam402 from enrichx402.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /api/strategy/decide on MineBean · via Roam402 from minebean.com (Unrated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "laso-auth",
@@ -160,7 +140,7 @@
       "originUrl": "https://claw402.ai/api/v1/ai/deepseek/models",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Backed by vergex.trade. Pay for any API with USDC. No API keys. No registration. Just a wallet. · via Roam402 from claw402.ai (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /api/v1/ai/deepseek/models on claw402 — x402 API Payment Gateway · via Roam402 from claw402.ai (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "claw402-gemini-models",
@@ -170,7 +150,7 @@
       "originUrl": "https://claw402.ai/api/v1/ai/gemini/models",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Backed by vergex.trade. Pay for any API with USDC. No API keys. No registration. Just a wallet. · via Roam402 from claw402.ai (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /api/v1/ai/gemini/models on claw402 — x402 API Payment Gateway · via Roam402 from claw402.ai (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "claw402-grok-models",
@@ -180,37 +160,27 @@
       "originUrl": "https://claw402.ai/api/v1/ai/grok/models",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Backed by vergex.trade. Pay for any API with USDC. No API keys. No registration. Just a wallet. · via Roam402 from claw402.ai (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /api/v1/ai/grok/models on claw402 — x402 API Payment Gateway · via Roam402 from claw402.ai (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
-      "slug": "wurkapi-agent-help-view",
-      "service": "wurkapi.fun",
+      "slug": "enrichx402-exa-search",
+      "service": "enrichx402.com",
       "tier": "Corroborated",
-      "method": "GET",
-      "originUrl": "https://wurkapi.fun/api/x402/quick/base/agent-help/view",
-      "originPriceUsd": 0.001,
-      "roamPriceUsd": 0.001,
-      "description": "View agent-help submissions (minimal fee ~0.001 USDC). Keep this secret confidential. · via Roam402 from wurkapi.fun (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "method": "POST",
+      "originUrl": "https://enrichx402.com/api/exa/search",
+      "originPriceUsd": 0.01,
+      "roamPriceUsd": 0.01,
+      "description": "Exa Contents - Retrieve content from URLs · via Roam402 from enrichx402.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
-      "slug": "wurkapi-agent-help-view-2",
-      "service": "wurkapi.fun",
+      "slug": "enrichx402-exa-contents",
+      "service": "enrichx402.com",
       "tier": "Corroborated",
-      "method": "GET",
-      "originUrl": "https://wurkapi.fun/api/x402/quick/base/agent-help/view/",
-      "originPriceUsd": 0.001,
-      "roamPriceUsd": 0.001,
-      "description": "View agent-help submissions (minimal fee ~0.001 USDC). Keep this secret confidential. · via Roam402 from wurkapi.fun (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "wurkapi-base-recover-jobs",
-      "service": "wurkapi.fun",
-      "tier": "Corroborated",
-      "method": "GET",
-      "originUrl": "https://wurkapi.fun/api/x402/quick/base/recover-jobs",
-      "originPriceUsd": 0.001,
-      "roamPriceUsd": 0.001,
-      "description": "Lost your view keys or paid but didn’t get a response (timeout/connection issues)? Pay 0.001 USDC to retrieve the view keys for your last… · via Roam402 from wurkapi.fun (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "method": "POST",
+      "originUrl": "https://enrichx402.com/api/exa/contents",
+      "originPriceUsd": 0.002,
+      "roamPriceUsd": 0.002,
+      "description": "POST /api/exa/contents on enrichx402.com · via Roam402 from enrichx402.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "bitrefill-esims-search",
@@ -230,7 +200,7 @@
       "originUrl": "https://api.bitrefill.com/x402/gift-cards/search",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Search 10,000+ gift card & voucher brands across 180+ countries by name and country. Pay in USDC via x402, no account. · via Roam402 from bitrefill.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /x402/gift-cards/search on Bitrefill · via Roam402 from bitrefill.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "bitrefill-invoice-create",
@@ -240,37 +210,47 @@
       "originUrl": "https://api.bitrefill.com/x402/invoice/create",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Search 10,000+ gift card & voucher brands across 180+ countries by name and country. Pay in USDC via x402, no account. · via Roam402 from bitrefill.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /x402/invoice/create on Bitrefill · via Roam402 from bitrefill.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
-      "slug": "theaslangroupllc-auto-value",
+      "slug": "theaslangroupllc-api-calculator",
       "service": "theaslangroupllc.com",
       "tier": "Corroborated",
       "method": "GET",
-      "originUrl": "https://autopulse.theaslangroupllc.com/api/auto/value",
-      "originPriceUsd": 0.00008,
-      "roamPriceUsd": 0.00008,
-      "description": "stablecoinpulse.theaslangroupllc.com paid API (/api/auto/value) · via Roam402 from theaslangroupllc.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "originUrl": "https://arbipulse.theaslangroupllc.com/api/calculator",
+      "originPriceUsd": 0.02,
+      "roamPriceUsd": 0.02,
+      "description": "GET /api/calculator on stablecoinpulse.theaslangroupllc.com · via Roam402 from theaslangroupllc.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
-      "slug": "theaslangroupllc-filings-search",
+      "slug": "theaslangroupllc-api-spread-tick",
       "service": "theaslangroupllc.com",
       "tier": "Corroborated",
       "method": "GET",
-      "originUrl": "https://filingspulse.theaslangroupllc.com/api/filings/search",
-      "originPriceUsd": 0.00008,
-      "roamPriceUsd": 0.00008,
-      "description": "stablecoinpulse.theaslangroupllc.com paid API (/api/filings/search) · via Roam402 from theaslangroupllc.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "originUrl": "https://arbipulse.theaslangroupllc.com/api/spread-tick",
+      "originPriceUsd": 0.02,
+      "roamPriceUsd": 0.02,
+      "description": "GET /api/spread-tick on stablecoinpulse.theaslangroupllc.com · via Roam402 from theaslangroupllc.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
-      "slug": "theaslangroupllc-gaming-meta",
+      "slug": "theaslangroupllc-api-author",
       "service": "theaslangroupllc.com",
       "tier": "Corroborated",
       "method": "GET",
-      "originUrl": "https://gamepulse.theaslangroupllc.com/api/gaming/meta",
-      "originPriceUsd": 0.00008,
-      "roamPriceUsd": 0.00008,
-      "description": "stablecoinpulse.theaslangroupllc.com paid API (/api/gaming/meta) · via Roam402 from theaslangroupllc.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "originUrl": "https://citepulse.theaslangroupllc.com/api/author",
+      "originPriceUsd": 0.02,
+      "roamPriceUsd": 0.02,
+      "description": "Bibliography verification for AI research agents — POST up to 20 citations (DOIs or free-text references) and get a per-reference verdict… · via Roam402 from theaslangroupllc.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "twit-tweets-like",
+      "service": "twit.sh",
+      "tier": "Corroborated",
+      "method": "POST",
+      "originUrl": "https://x402.twit.sh/tweets/like",
+      "originPriceUsd": 0.005,
+      "roamPriceUsd": 0.005,
+      "description": "Like a tweet · via Roam402 from twit.sh (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "twit-tweets-mentions",
@@ -290,17 +270,7 @@
       "originUrl": "https://x402.twit.sh/users/by/id",
       "originPriceUsd": 0.005,
       "roamPriceUsd": 0.005,
-      "description": "Deep user intelligence workflow. For a given Twitter/X username, returns structured account metadata (location, verification status, blue… · via Roam402 from twit.sh (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "twit-by-username",
-      "service": "twit.sh",
-      "tier": "Corroborated",
-      "method": "GET",
-      "originUrl": "https://x402.twit.sh/users/by/username",
-      "originPriceUsd": 0.005,
-      "roamPriceUsd": 0.005,
-      "description": "Deep user intelligence workflow. For a given Twitter/X username, returns structured account metadata (location, verification status, blue… · via Roam402 from twit.sh (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /users/by/id on twit.sh · via Roam402 from twit.sh (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "polymer-x402-v1",
@@ -310,7 +280,7 @@
       "originUrl": "https://api.polymer.zone/x402/v1",
       "originPriceUsd": 0.01,
       "roamPriceUsd": 0.01,
-      "description": "Polymer paid API (/x402/v1) · via Roam402 from polymer.zone (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /x402/v1 on Polymer · via Roam402 from polymer.zone (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "payai-base-paid-content",
@@ -320,7 +290,7 @@
       "originUrl": "https://x402.payai.network/api/base/paid-content",
       "originPriceUsd": 0.01,
       "roamPriceUsd": 0.01,
-      "description": "Payai paid API (/api/base/paid-content) · via Roam402 from payai.network (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /api/base/paid-content on Payai · via Roam402 from payai.network (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "stablestudio-api-upload",
@@ -333,44 +303,54 @@
       "description": "Get a client token for direct upload to Vercel Blob · via Roam402 from stablestudio.io (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
+      "slug": "apify-x402-prepaid-tokens",
+      "service": "apify.com",
+      "tier": "Corroborated",
+      "method": "GET",
+      "originUrl": "https://agi.apify.com/protocols/x402/prepaid-tokens",
+      "originPriceUsd": 1,
+      "roamPriceUsd": 1,
+      "description": "Apify is the largest and most trusted marketplace of tools for web scraping, crawling, data extraction, and automation. Use these tools, … · via Roam402 from apify.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
       "slug": "stablesocial-facebook-comment-replies",
       "service": "stablesocial.dev",
       "tier": "Corroborated",
-      "method": "GET",
+      "method": "POST",
       "originUrl": "https://stablesocial.dev/api/facebook/comment-replies",
       "originPriceUsd": 0.06,
       "roamPriceUsd": 0.06,
-      "description": "Pay-per-request access to social media data from TikTok, Instagram, Facebook, Reddit, and LinkedIn. No auth, no subscriptions. · via Roam402 from stablesocial.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /api/facebook/comment-replies on StableSocial · via Roam402 from stablesocial.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "stablesocial-facebook-followers",
       "service": "stablesocial.dev",
       "tier": "Corroborated",
-      "method": "GET",
+      "method": "POST",
       "originUrl": "https://stablesocial.dev/api/facebook/followers",
       "originPriceUsd": 0.06,
       "roamPriceUsd": 0.06,
-      "description": "Pay-per-request access to social media data from TikTok, Instagram, Facebook, Reddit, and LinkedIn. No auth, no subscriptions. · via Roam402 from stablesocial.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /api/facebook/followers on StableSocial · via Roam402 from stablesocial.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "stablesocial-facebook-following",
       "service": "stablesocial.dev",
       "tier": "Corroborated",
-      "method": "GET",
+      "method": "POST",
       "originUrl": "https://stablesocial.dev/api/facebook/following",
       "originPriceUsd": 0.06,
       "roamPriceUsd": 0.06,
-      "description": "Pay-per-request access to social media data from TikTok, Instagram, Facebook, Reddit, and LinkedIn. No auth, no subscriptions. · via Roam402 from stablesocial.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /api/facebook/following on StableSocial · via Roam402 from stablesocial.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "fortclaw-jump",
       "service": "fortclaw.com",
       "tier": "Corroborated",
-      "method": "GET",
+      "method": "POST",
       "originUrl": "https://mcp.fortclaw.com/jump",
       "originPriceUsd": 0.001,
       "roamPriceUsd": 0.001,
-      "description": "Instantly teleport a unit to target coordinates (x, y). Triggers combat if enemy unit present. · via Roam402 from fortclaw.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "FortClaw /jump ($1 USDC) · via Roam402 from fortclaw.com (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "apexrunner-signals-btc-dominance",
@@ -390,7 +370,7 @@
       "originUrl": "https://apexrunner.ai/signals/bb-analysis",
       "originPriceUsd": 0.07,
       "roamPriceUsd": 0.07,
-      "description": "APEX Runner: Regime Transition Probability Institutional Signal · via Roam402 from apexrunner.ai (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /signals/bb-analysis on APEX Runner — Live Crypto Trading Signals for AI Agents (x402) · via Roam402 from apexrunner.ai (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "apexrunner-signals-market-pulse-bundle",
@@ -400,7 +380,7 @@
       "originUrl": "https://apexrunner.ai/signals/market-pulse-bundle",
       "originPriceUsd": 0.07,
       "roamPriceUsd": 0.07,
-      "description": "APEX Runner: Regime Transition Probability Institutional Signal · via Roam402 from apexrunner.ai (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /signals/market-pulse-bundle on APEX Runner — Live Crypto Trading Signals for AI Agents (x402) · via Roam402 from apexrunner.ai (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "stocktrends-regime-latest",
@@ -420,7 +400,7 @@
       "originUrl": "https://api.stocktrends.com/v1/breadth/sector/latest",
       "originPriceUsd": 0.1,
       "roamPriceUsd": 0.1,
-      "description": "Historical weekly Stock Trends indicator series for a symbol. Stock Trends indicators are part of a multi-decade classification framework… · via Roam402 from stocktrends.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /v1/breadth/sector/latest on Stocktrends · via Roam402 from stocktrends.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "stocktrends-published-latest",
@@ -430,37 +410,7 @@
       "originUrl": "https://api.stocktrends.com/v1/selections/published/latest",
       "originPriceUsd": 0.075,
       "roamPriceUsd": 0.075,
-      "description": "Historical weekly Stock Trends indicator series for a symbol. Stock Trends indicators are part of a multi-decade classification framework… · via Roam402 from stocktrends.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "stabledeepline-company-enrich",
-      "service": "stable-deepline.dev",
-      "tier": "Corroborated",
-      "method": "POST",
-      "originUrl": "https://stable-deepline.dev/api/company/enrich",
-      "originPriceUsd": 0.25,
-      "roamPriceUsd": 0.25,
-      "description": "Enrich Company — merged 30+ field profile from Apollo, Crustdata, and PeopleDataLabs: revenue, headcount, industry, funding, valuation, t… · via Roam402 from stable-deepline.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "stabledeepline-person-from-email",
-      "service": "stable-deepline.dev",
-      "tier": "Corroborated",
-      "method": "POST",
-      "originUrl": "https://stable-deepline.dev/api/person/from-email",
-      "originPriceUsd": 0.15,
-      "roamPriceUsd": 0.15,
-      "description": "Enrich Company — merged 30+ field profile from Apollo, Crustdata, and PeopleDataLabs: revenue, headcount, industry, funding, valuation, t… · via Roam402 from stable-deepline.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
-    },
-    {
-      "slug": "stabledeepline-contacts-by-role",
-      "service": "stable-deepline.dev",
-      "tier": "Corroborated",
-      "method": "GET",
-      "originUrl": "https://stable-deepline.dev/api/contacts/by-role",
-      "originPriceUsd": 0.25,
-      "roamPriceUsd": 0.25,
-      "description": "Pay-per-request access to Deepline GTM tooling: waterfall email discovery, phone finding, company enrichment, decision-maker lookup, and … · via Roam402 from stable-deepline.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "GET /v1/selections/published/latest on Stocktrends · via Roam402 from stocktrends.com (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "chain-reports-latest",
@@ -480,7 +430,7 @@
       "originUrl": "https://agents.chain.link/v1/operations/:operationId/submit",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Chainlink For Agents: register an agent identity. Onboarding: GET /v1/skills, GET /v1/terms-of-service, POST /v1/register. · via Roam402 from chain.link (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /v1/operations/:operationId/submit on agents.chain.link · via Roam402 from chain.link (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "chain-v1-register",
@@ -490,7 +440,37 @@
       "originUrl": "https://agents.chain.link/v1/register",
       "originPriceUsd": 0.002,
       "roamPriceUsd": 0.002,
-      "description": "Chainlink For Agents: register an agent identity. Onboarding: GET /v1/skills, GET /v1/terms-of-service, POST /v1/register. · via Roam402 from chain.link (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+      "description": "POST /v1/register on agents.chain.link · via Roam402 from chain.link (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "stabledeepline-company-enrich",
+      "service": "stable-deepline.dev",
+      "tier": "Corroborated",
+      "method": "POST",
+      "originUrl": "https://stable-deepline.dev/api/company/enrich",
+      "originPriceUsd": 0.25,
+      "roamPriceUsd": 0.25,
+      "description": "Enrich Company — merged 30+ field profile from Apollo, Crustdata, and PeopleDataLabs: revenue, headcount, industry, funding, valuation, t… · via Roam402 from stable-deepline.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "stabledeepline-contacts-by-role",
+      "service": "stable-deepline.dev",
+      "tier": "Corroborated",
+      "method": "POST",
+      "originUrl": "https://stable-deepline.dev/api/contacts/by-role",
+      "originPriceUsd": 0.25,
+      "roamPriceUsd": 0.25,
+      "description": "POST /api/contacts/by-role on Deepline GTM API · via Roam402 from stable-deepline.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "stabledeepline-email-from-linkedin",
+      "service": "stable-deepline.dev",
+      "tier": "Corroborated",
+      "method": "POST",
+      "originUrl": "https://stable-deepline.dev/api/email/from-linkedin",
+      "originPriceUsd": 0.25,
+      "roamPriceUsd": 0.25,
+      "description": "POST /api/email/from-linkedin on Deepline GTM API · via Roam402 from stable-deepline.dev (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     },
     {
       "slug": "stabledomains-api-check",
@@ -501,6 +481,26 @@
       "originPriceUsd": 0.1,
       "roamPriceUsd": 0.1,
       "description": "Register and manage domain names · via Roam402 from stabledomains.dev (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "cheaptokens-api-buy",
+      "service": "cheaptokens.ai",
+      "tier": "Established",
+      "method": "POST",
+      "originUrl": "https://cheaptokens.ai/api/buy",
+      "originPriceUsd": 1,
+      "roamPriceUsd": 1,
+      "description": "POST /api/buy on CheapTokens — Cheaper AI Inference Through Venice.ai · via Roam402 from cheaptokens.ai (Established on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
+    },
+    {
+      "slug": "loyalspark-x402-gateway-balance",
+      "service": "loyalspark.online",
+      "tier": "Corroborated",
+      "method": "GET",
+      "originUrl": "https://api.loyalspark.online/x402-gateway/balance",
+      "originPriceUsd": 0.001,
+      "roamPriceUsd": 0.001,
+      "description": "Onchain loyalty platform on Base Network. Businesses launch branded rewards in minutes. Customers earn real value with every purchase. AI… · via Roam402 from loyalspark.online (Corroborated on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts."
     }
   ]
 }

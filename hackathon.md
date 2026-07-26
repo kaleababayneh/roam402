@@ -124,7 +124,7 @@ market data — payable in USDC on Algorand through one merchant, fulfilled
 cross-chain with cryptographically signed dual-chain receipts.
 
 **What the payment unlocks**: 50+ liveness-probed, trust-tiered API
-capabilities (from $0.00062/call LLM completions to $0.24 deep token
+capabilities (from $0.0001/call LLM completions to $0.24 deep token
 scans), plus native trust endpoints and composed diligence bundles.
 Discovery is free (`/catalog`); every paid response carries an EdDSA-signed
 receipt (did:jwk — verifiable offline by anyone) binding payer, resource,
@@ -183,7 +183,7 @@ inspectable execution).
 - **OpenAI-compatible baseURL** (highest-leverage single feature left):
   alias `POST /v1/chat/completions` → blockrun wrap. Any existing agent
   framework switches with ONE line (`baseURL: "https://<domain>/v1"`).
-  Pay-per-call LLM on Algorand, no account, at $0.00062 — the tx-count
+  Pay-per-call LLM on Algorand, no account, at $0.0001 — the tx-count
   engine for the leaderboard and the easiest thing to market we own.
 - **2-minute starter kit**: `npx roam402-start` → generates a wallet,
   prints faucet/opt-in steps and a funded first call. Friction is the

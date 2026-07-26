@@ -6,13 +6,14 @@
  */
 
 import { Hono } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 import type { ReceiptStore } from "../receipts/store";
 
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
 }
 
-export function mountReceipts(app: Hono, store: ReceiptStore): void {
+export function mountReceipts(app: Hono<AppEnv>, store: ReceiptStore): void {
   app.get("/receipts.json", async (c) =>
     c.json({ enabled: store.enabled, receipts: await store.list() })
   );

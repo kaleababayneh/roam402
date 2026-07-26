@@ -26,20 +26,42 @@ function state(key: string): BreakerState {
   return s;
 }
 
-/** True → refuse the request before taking payment. */
-export function isOpen(key: string): boolean {
+const KV_PREFIX = "breaker:";
+/** KV TTL = the cool-down: the key expiring IS the half-open transition. */
+const KV_TTL_S = Math.ceil(COOL_MS / 1000);
+
+/** True → refuse the request before taking payment.
+ *  Memory-first; falls back to KV so trips survive isolate recycling. */
+export async function isOpen(key: string, kv?: KVNamespace): Promise<boolean> {
   const s = state(key);
-  if (s.openedAt === null) return false;
-  if (Date.now() - s.openedAt > COOL_MS) return false; // half-open: allow a probe
-  return true;
+  if (s.openedAt !== null && Date.now() - s.openedAt <= COOL_MS) return true;
+  if (!kv) return false;
+  try {
+    return (await kv.get(`${KV_PREFIX}${key}`)) !== null;
+  } catch {
+    return false;
+  }
 }
 
-export function recordSuccess(key: string): void {
+export function recordSuccess(key: string, kv?: KVNamespace): void {
   states.set(key, { failures: 0, openedAt: null });
+  if (kv) void kv.delete(`${KV_PREFIX}${key}`).catch(() => {});
 }
 
-export function recordFailure(key: string): void {
+export function recordFailure(key: string, kv?: KVNamespace): void {
   const s = state(key);
   s.failures += 1;
-  if (s.failures >= THRESHOLD) s.openedAt = Date.now();
+  if (s.failures >= THRESHOLD) {
+    s.openedAt = Date.now();
+    if (kv) void kv.put(`${KV_PREFIX}${key}`, String(s.openedAt), { expirationTtl: KV_TTL_S }).catch(() => {});
+  }
+}
+
+/** Currently-open trips in this isolate (for /healthz). */
+export function openTripCount(): number {
+  let n = 0;
+  for (const s of states.values()) {
+    if (s.openedAt !== null && Date.now() - s.openedAt <= COOL_MS) n++;
+  }
+  return n;
 }

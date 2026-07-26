@@ -28,7 +28,7 @@ competitor has $21 settled; the 6-listing leader has $176).
   → settle).
 - Zero self-generated volume; the receipts page is the proof-of-payers.
 - Wrapped services: Established+ tier, live-probed, ≤$1, notified + opt-out.
-- Margin: origin × 1.2 + $0.0005 (see src/pricing.ts).
+- Pricing: TRACTION MODE — parity with the origin price (zero margin; see src/pricing.ts). Raising later = two constants + regenerate.
 - One merchant, one payTo, one root domain (rules requirement).
 
 ## Open items

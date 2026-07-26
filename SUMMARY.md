@@ -90,10 +90,11 @@ ch→main promotion until we choose to ship it.
    "Listed" despite $152K/30d) → we **volume-qualify**: ≥$100 settled in
    30d admits a service regardless of tier, because buyers voting with
    USDC is the stronger signal.
-4. **Margin covers risk**: price = origin × 1.2 + $0.0005 (rounded up to a
-   µUSDC); per-request origin cap $1; Base-only fulfilment covers the
-   demand-relevant catalog (Solana later). Float exposure ≈ in-flight
-   requests only.
+4. **Traction pricing (since 2026-07-26)**: parity — we charge exactly the
+   origin price (zero margin; leaderboard rewards volume, parity removes
+   the only reason to bypass us). Per-request origin cap $1; Base-only
+   fulfilment covers the demand-relevant catalog (Solana later). Float
+   exposure ≈ in-flight requests; raising margin later = two constants.
 5. **Settle-after-handler**: the x402 middleware verifies before the
    handler and settles only on success — our no-charge-on-failure
    guarantee rests on this (empirically confirmed; see kill-switch test).
@@ -114,7 +115,7 @@ tests.
 | **Never-charge-when-refusing** | KILL_SWITCH=on → real payment client got `503 kill_switch` and **zero USDC moved** (balances re-checked on-chain) |
 | **MCP server** (`roam402-mcp`) | Real stdio agent session: initialize → tools/list (5 tools) → `roam_balance` (live algod) → `roam_trust` **paid $0.005 through an MCP tool call** (debit confirmed on-chain) |
 | **Cryptographically verifiable receipts** | `pnpm verify:receipt`: real paid call → EdDSA JWS receipt → **signature VERIFIED against the public key embedded in its did:jwk kid** (payer, network, resourceUrl attested; no key registry, no server trust) |
-| Catalog v2 | 50 routes · 23 services · 15 POST, generated from the census; includes the two highest-demand services in the economy (blockrun LLM completions $0.00062, quickintel scans); https-normalised, method-aware dedupe, explicit interfaces ranked first |
+| Catalog v2 | 50 routes · 23 services · 15 POST, generated from the census; includes the two highest-demand services in the economy (blockrun LLM completions $0.0001, quickintel scans); https-normalised, method-aware dedupe, explicit interfaces ranked first |
 | Self-healing catalog | Cron sweep probes origins **unpaid** (an HTTP 402 reply proves alive + x402-speaking, zero spend); verdicts in KV; guard refuses "down" routes **before** payment |
 | Buyer-safety guard order | kill switch → route exists → breaker/health → wallet present → spend cap — all **before** the 402 is ever issued, so agents never sign for a doomed call |
 | Product surfaces | `/` landing (Agents-Trust design system: Darker Grotesque / DM Sans / DM Mono, Validatier light palette), `/playground` (Inspect-402 works for anyone; Pera pay flow in beta), `/catalog`, `/receipts` (+ .json), `/api/challenge-stats` (CORS-open aggregation), `/llms.txt`, `/.well-known/agents.json` |

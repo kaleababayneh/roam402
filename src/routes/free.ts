@@ -6,10 +6,13 @@
  */
 
 import { Hono } from "hono";
+import type { AppEnv } from "../lib/appEnv";
 import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
+import { getHealthSummary } from "../fulfillment/health";
+import { openTripCount } from "../fulfillment/breaker";
 
 /** The machine-readable catalog payload — shared by free /catalog and paid /discover. */
 export function catalogPayload(cfg: Config): Record<string, unknown> {
@@ -36,15 +39,19 @@ export function catalogPayload(cfg: Config): Record<string, unknown> {
   };
 }
 
-export function mountFreeRoutes(app: Hono, cfg: Config, hasWallet: boolean): void {
-  app.get("/healthz", (c) =>
+export function mountFreeRoutes(app: Hono<AppEnv>, cfg: Config, hasWallet: boolean, kv: KVNamespace | undefined): void {
+  app.get("/healthz", async (c) =>
     c.json({
       ok: true,
       network: cfg.network,
       wrappedRoutes: catalog.routes.length,
       nativeRoutes: NATIVE_ROUTES.length,
+      catalogGeneratedAt: catalog.generatedAt,
       fulfilment: hasWallet ? "ready" : "wallet-missing",
       killSwitch: cfg.killSwitch,
+      signedReceipts: !!cfg.receiptSigningJwk,
+      breakerTrips: openTripCount(),
+      lastHealthSweep: await getHealthSummary(kv),
     })
   );
 
