@@ -2,6 +2,7 @@ name = "roam402"
 main = "src/index.ts"
 compatibility_date = "2026-07-01"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 # Custom domain (provisioned automatically on `wrangler deploy` ONCE the
 # roam402.com zone exists in this Cloudflare account — RUNBOOK P1 step 0).
