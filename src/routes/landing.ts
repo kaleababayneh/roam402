@@ -126,8 +126,8 @@ function page(cfg: Config): string {
   <div class="hero">
     <div class="eyebrow">x402 roaming gateway · Algorand ${cfg.network}</div>
     <h1>Every verified x402 service.<br/><em>One merchant on Algorand.</em></h1>
-    <p class="sub">Agents on Algorand get the entire x402 economy — pay-per-call inference,
-    token safety scans, market data, tools — through one gateway. Pay USDC on Algorand,
+    <p class="sub">Agents on Algorand get the entire x402 economy: pay-per-call inference,
+    token safety scans, market data, and tools, all through one gateway. Pay USDC on Algorand,
     settled by the GoPlausible facilitator; Roam402 fulfils the call on the service's home
     chain from its own treasury and returns the response with receipts from both chains.</p>
     <div class="stats">
@@ -142,11 +142,11 @@ function page(cfg: Config): string {
     <div class="h-section">How it works</div>
     <div class="steps">
       <div class="step"><div class="k">01 · HTTP 402</div><h3>Call any route</h3>
-        <p>GET or POST a route below with no payment — the gateway answers with an x402
+        <p>GET or POST a route below with no payment. The gateway answers with an x402
         challenge: price in USDC, our Algorand address, the facilitator's fee-payer.</p></div>
       <div class="step"><div class="k">02 · PAY ON ALGORAND</div><h3>Settle in USDC</h3>
         <p>Your client signs the payment; GoPlausible verifies and settles it on Algorand.
-        One merchant address for everything — spend tracking stays trivial.</p></div>
+        One merchant address for everything, so spend tracking stays trivial.</p></div>
       <div class="step"><div class="k">03 · DUAL RECEIPTS</div><h3>Fulfilled cross-chain</h3>
         <p>We pay the origin service on its home chain from our treasury and stream the
         response back with both settlement receipts. Origin fails → you are never charged.</p></div>
