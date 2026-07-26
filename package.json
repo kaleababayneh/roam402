@@ -18,7 +18,8 @@
     "account:evm": "tsx scripts/new-evm-account.ts",
     "origin:dev": "tsx test/origin-server.ts",
     "loop:test": "tsx scripts/loop-test.ts",
-    "latency": "tsx scripts/latency-test.ts"
+    "latency": "tsx scripts/latency-test.ts",
+    "trace": "tsx scripts/trace-x402.ts"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",
