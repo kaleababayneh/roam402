@@ -78,7 +78,7 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
     {
       title: "Trust report for an x402 seller",
       description:
-        "PAID ($0.005 USDC on Algorand). Agents-Trust tier (Corroborated/Established/Emerging/Listed), score, and verified on-chain volume for a seller domain — from $45M+ of indexed settlement. Use before relying on any seller.",
+        "PAID ($0.0005 USDC on Algorand). Agents-Trust tier (Corroborated/Established/Emerging/Listed), score, and verified on-chain volume for a seller domain — from $45M+ of indexed settlement. Use before relying on any seller.",
       inputSchema: { domain: z.string().describe("Seller domain, e.g. blockrun.ai") },
     },
     async ({ domain }) => {
@@ -95,7 +95,7 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
     {
       title: "Safety precheck for an x402 endpoint URL",
       description:
-        "PAID ($0.002 USDC on Algorand). Before paying an UNKNOWN x402 endpoint: is the seller known, what trust tier, should you pay? Cheap insurance against dead or scam endpoints.",
+        "PAID ($0.0002 USDC on Algorand). Before paying an UNKNOWN x402 endpoint: is the seller known, what trust tier, should you pay? Cheap insurance against dead or scam endpoints.",
       inputSchema: { url: z.string().describe("Full endpoint URL to check") },
     },
     async ({ url }) => {

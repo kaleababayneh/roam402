@@ -38,14 +38,14 @@ export const NATIVE_ROUTES: NativeRoute[] = [
         example: {
           name: "Roam402 | the x402 roaming gateway",
           wrapped: [{ path: "/r/quickintel-scan-full", method: "GET", price: "$0.03", service: "quickintel.io", trust_tier: "Listed" }],
-          native: [{ path: "/trust", price: "$0.005" }],
+          native: [{ path: "/trust", price: "$0.0005" }],
         },
       },
     }),
   },
   {
     path: "/trust",
-    priceUsd: 0.005,
+    priceUsd: 0.0005,
     description:
       "Trust report for an x402 seller domain: Agents-Trust tier (Corroborated/Established/Emerging/Listed), 0-100 score, and evidence pillars from $45M+ of indexed on-chain settlement. Query: ?domain=example.com",
     discovery: declareDiscoveryExtension({
@@ -62,7 +62,7 @@ export const NATIVE_ROUTES: NativeRoute[] = [
   },
   {
     path: "/precheck",
-    priceUsd: 0.002,
+    priceUsd: 0.0002,
     description:
       "Pre-flight safety check before your agent pays an x402 endpoint: known-seller match + trust tier from the Agents-Trust census, and — for endpoints in the Roam402 catalog — the catalogued price, our route, and the last liveness probe verdict. Query: ?url=https://…",
     discovery: declareDiscoveryExtension({

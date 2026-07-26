@@ -80,7 +80,7 @@ full catalog behind door #1.** Listing few costs zero leaderboard credit
 |---|---|---|
 | `GET /catalog` (listed as a resource itself) | **The master key** | "Machine-readable catalog of 50+ verified x402 services callable through this merchant — LLM inference, token security, market data — each with USDC price, trust tier and liveness. Free." |
 | `GET /trust?domain=` | Sole-provider native | "Trust report for any x402 seller: Agents-Trust tier, 0–100 score, verified on-chain volume from $45M+ of indexed settlement." |
-| `GET /precheck?url=` | Sole-provider native | "Pre-flight safety check before your agent pays an unknown x402 endpoint: known-seller match, tier, liveness, price sanity. $0.002 insurance." |
+| `GET /precheck?url=` | Sole-provider native | "Pre-flight safety check before your agent pays an unknown x402 endpoint: known-seller match, tier, liveness, price sanity. $0.0002 insurance." |
 | `POST /bundle/token-diligence` | Our composed product | "One call, full token due-diligence: QuickIntel security scan + market context + Agents-Trust verification, one JSON verdict, per-source receipts." |
 | `GET /r/quickintel-scan-full` | Category-proof wrap | "Full token security scan (honeypot, taxes, LP locks, contract risk) by QuickIntel — via Roam402, payable in USDC on Algorand." |
 

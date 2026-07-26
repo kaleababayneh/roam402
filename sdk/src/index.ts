@@ -77,9 +77,9 @@ export interface CatalogEntry {
 export interface RoamClient {
   /** Call a wrapped route by slug; pays the 402 automatically. */
   call(slug: string, opts?: CallOptions): Promise<Response>;
-  /** Agents-Trust trust report for an x402 seller domain (paid, $0.005). */
+  /** Agents-Trust trust report for an x402 seller domain (paid, $0.0005). */
   trust(domain: string): Promise<TrustReport>;
-  /** Pre-flight safety check for any x402 endpoint URL (paid, $0.002). */
+  /** Pre-flight safety check for any x402 endpoint URL (paid, $0.0002). */
   precheck(url: string): Promise<PrecheckReport>;
   /** Free machine-readable catalog of everything callable. */
   catalog(): Promise<{ native: CatalogEntry[]; wrapped: CatalogEntry[] }>;

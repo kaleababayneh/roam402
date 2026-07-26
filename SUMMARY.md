@@ -148,7 +148,7 @@ USDC at writing; verify balances any time):
 
 ```bash
 curl -s https://testnet-api.algonode.cloud/v2/accounts/VKBLLIKMUDZWUECFTNXSBEER67GNSI55EF5VVRY5DZUSO75IOITXDJDLAM | python3 -m json.tool | grep -A2 10458941
-pnpm smoke              # real $0.005 payment → HTTP 200 + PAYMENT-RESPONSE + signed receipt
+pnpm smoke              # real paid call (/trust now $0.0005) → HTTP 200 + receipt
 pnpm verify:receipt     # pays again AND cryptographically verifies the JWS receipt
 ```
 

@@ -17,8 +17,8 @@ const roam = createRoamClient({
 });
 
 const catalog = await roam.catalog();                       // free discovery
-const trust   = await roam.trust("blockrun.ai");            // $0.005
-const check   = await roam.precheck("https://…/endpoint");  // $0.002
+const trust   = await roam.trust("blockrun.ai");            // $0.0005
+const check   = await roam.precheck("https://…/endpoint");  // $0.0002
 const scan    = await roam.call("quickintel-scan-full", {   // wrapped route
   query: { chain: "base", tokenAddress: "0x…" },
 });
