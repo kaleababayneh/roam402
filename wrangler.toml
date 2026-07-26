@@ -3,6 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2026-07-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain (provisioned automatically on `wrangler deploy` ONCE the
+# roam402.com zone exists in this Cloudflare account — RUNBOOK P1 step 0).
+routes = [
+  { pattern = "roam402.com", custom_domain = true }
+]
+
 # ── Environment ───────────────────────────────────────────────────────────────
 # NETWORK selects every chain constant in src/config.ts. Ship testnet by
 # default; the mainnet cutover is a single var flip + payTo change (see
@@ -17,6 +23,7 @@ PAY_TO_ADDRESS = ""                       # set after account creation (RUNBOOK 
 FACILITATOR_URL = "https://facilitator.goplausible.xyz"
 KILL_SWITCH = "off"                       # "on" → every paid route returns 503
 PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
+PUBLIC_BASE_URL = "https://roam402.com"   # advertised in every 402's extra.catalog (.dev.vars overrides locally)
 
 # ── Receipts log (optional, recommended before mainnet) ──────────────────────
 # wrangler kv namespace create RECEIPTS   → paste the id below, uncomment.

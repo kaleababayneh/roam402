@@ -23,8 +23,13 @@
 2. Create a fresh Base hot wallet; fund ~$300 USDC + a little ETH for gas.
 3. `wrangler secret put BASE_WALLET_PRIVATE_KEY` (paste key; never in files).
 4. wrangler.toml: `NETWORK = "mainnet"`, `PAY_TO_ADDRESS = <merchant addr>`.
-5. Buy/attach the production domain (Workers custom domain) — one root
-   domain per merchant, per the challenge rules.
+5. Domain (OWNED: roam402.com) — one-time Cloudflare wiring:
+   a. Cloudflare dashboard → Add site → roam402.com (Free plan is fine).
+   b. At the registrar, set the nameservers Cloudflare shows you.
+   c. Wait for the zone to go Active, then `pnpm deploy` — wrangler
+      provisions the custom domain automatically (routes block in
+      wrangler.toml). PUBLIC_BASE_URL is already https://roam402.com.
+   d. NFD: register roam402.algo to the merchant payTo (Bazaar naming).
 6. `pnpm deploy`, then make ONE real payment (smoke-client with a funded
    mainnet buyer account, smallest route) — the official "finish line":
    paid response + USDC lands in payTo + endpoint appears in the Bazaar with

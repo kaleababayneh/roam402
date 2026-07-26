@@ -92,7 +92,7 @@ note it needs no API keys from us either way; it's the same x402-paid wrap.)*
 1. `/catalog` free JSON — SDK + MCP read it live (`roam_catalog`), so every
    integration auto-reflects catalog growth with no republishing.
 2. **Every 402 advertises the index** — build item: add
-   `catalog: "https://<domain>/catalog"` to `extra` on every challenge, so
+   `catalog: "https://roam402.com/catalog"` to `extra` on every challenge, so
    touching ANY route hands the agent the full map inside the protocol
    response (and the Bazaar records inherit it).
 3. `/llms.txt` + `/.well-known/agents.json` (agentic crawler surfaces).
@@ -182,7 +182,7 @@ inspectable execution).
 
 - **OpenAI-compatible baseURL** (highest-leverage single feature left):
   alias `POST /v1/chat/completions` → blockrun wrap. Any existing agent
-  framework switches with ONE line (`baseURL: "https://<domain>/v1"`).
+  framework switches with ONE line (`baseURL: "https://roam402.com/v1"`).
   Pay-per-call LLM on Algorand, no account, at $0.0001 — the tx-count
   engine for the leaderboard and the easiest thing to market we own.
 - **2-minute starter kit**: `npx roam402-start` → generates a wallet,
