@@ -52,9 +52,9 @@ function page(cfg: Config): string {
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Roam402 — every x402 service, payable on Algorand</title>
+<title>Roam402 | Every x402 service, payable on Algorand</title>
 <meta name="description" content="The x402 roaming gateway: ${n} verified services from the $45M+ x402 economy, payable in USDC on Algorand via the GoPlausible facilitator, fulfilled cross-chain with dual receipts. By Agents-Trust."/>
-<meta property="og:title" content="Roam402 — every x402 service, payable on Algorand"/>
+<meta property="og:title" content="Roam402 | Every x402 service, payable on Algorand"/>
 <meta property="og:description" content="${n} trust-tiered services · one Algorand merchant · dual-chain receipts. By Agents-Trust."/>
 <meta name="theme-color" content="#f4f5fb"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -189,7 +189,7 @@ ${catalogRows()}
 </html>`;
 }
 
-const LLMS_TXT = (n: number) => `# Roam402 — the x402 roaming gateway
+const LLMS_TXT = (n: number) => `# Roam402 | the x402 roaming gateway
 
 Every verified x402 service from the Base/Solana economy, payable in USDC on
 Algorand (facilitator: GoPlausible). ${n} wrapped routes + native trust

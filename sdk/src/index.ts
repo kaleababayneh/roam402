@@ -1,5 +1,5 @@
 /**
- * roam402 — client SDK for the Roam402 gateway.
+ * roam402 | client SDK for the Roam402 gateway.
  *
  *   import { createRoamClient, signerFromMnemonic } from "roam402";
  *

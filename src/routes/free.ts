@@ -17,7 +17,7 @@ import { openTripCount } from "../fulfillment/breaker";
 /** The machine-readable catalog payload — shared by free /catalog and paid /discover. */
 export function catalogPayload(cfg: Config): Record<string, unknown> {
   return {
-    name: "Roam402 — the x402 roaming gateway",
+    name: "Roam402 | the x402 roaming gateway",
     by: "agents-trust.com",
     network: cfg.chain.caip2,
     asset: `USDC (ASA ${cfg.chain.usdcAsaId})`,

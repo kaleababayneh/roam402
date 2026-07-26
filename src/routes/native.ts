@@ -35,7 +35,7 @@ export const NATIVE_ROUTES: NativeRoute[] = [
       input: {},
       output: {
         example: {
-          name: "Roam402 — the x402 roaming gateway",
+          name: "Roam402 | the x402 roaming gateway",
           wrapped: [{ path: "/r/quickintel-scan-full", method: "GET", price: "$0.03", service: "quickintel.io", trust_tier: "Listed" }],
           native: [{ path: "/trust", price: "$0.005" }],
         },

@@ -33,7 +33,7 @@ function options(): string {
 function page(cfg: Config): string {
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Roam402 — playground</title>
+<title>Roam402 | playground</title>
 <link href="https://fonts.googleapis.com/css2?family=Darker+Grotesque:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   :root{--canvas:#f4f5fb;--card:#fff;--ink:#0d0e15;--head:#181a26;--body:#3b3f52;--muted:#71768d;--line:#e2e5ee;--indigo:#4f46e5;--money:#059669}

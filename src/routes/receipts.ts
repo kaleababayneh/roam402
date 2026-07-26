@@ -34,7 +34,7 @@ export function mountReceipts(app: Hono<AppEnv>, store: ReceiptStore): void {
       .join("\n");
     return c.html(`<!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Roam402 — receipts</title>
+<title>Roam402 | Receipts</title>
 <link href="https://fonts.googleapis.com/css2?family=Darker+Grotesque:wght@700;800&family=DM+Sans:wght@400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   body{background:#f4f5fb;color:#3b3f52;font-family:'DM Sans',system-ui,sans-serif;margin:0}
