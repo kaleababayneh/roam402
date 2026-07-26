@@ -13,6 +13,7 @@ import type { RouteConfig } from "@x402/core/server";
 import type { Config } from "../config";
 import { GatewayError } from "../lib/errors";
 import { catalogPayload } from "./free";
+import type { ReceiptStore } from "../receipts/store";
 import { censusRows } from "../lib/census";
 import { catalog } from "../catalog";
 import { getRouteHealth } from "../fulfillment/health";
@@ -93,8 +94,23 @@ async function leaderboardRows() {
 }
 
 /** Mount the native paid handlers (payment middleware runs before these). */
-export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespace | undefined): void {
-  app.get("/discover", (c) => c.json(catalogPayload(cfg)));
+export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespace | undefined, receipts: ReceiptStore): void {
+  /** Native settlements belong on the proof-of-payers log too. */
+  const record = (path: string): Promise<void> =>
+    receipts.record({
+      ts: new Date().toISOString(),
+      route: path,
+      service: "roam402-native",
+      method: "GET",
+      priceUsd: NATIVE_ROUTES.find((r) => r.path === path)?.priceUsd ?? 0,
+      originReceipt: null,
+      originChain: null,
+    });
+
+  app.get("/discover", async (c) => {
+    await record("/discover");
+    return c.json(catalogPayload(cfg));
+  });
 
   app.get("/trust", async (c) => {
     const domain = (c.req.query("domain") ?? "").toLowerCase().trim();
@@ -103,6 +119,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     const { rows, stale } = await leaderboardRows();
     const row = rows.find((r) => (r.domain ?? "").toLowerCase() === domain);
     if (stale) c.header("X-Roam-Census", "stale");
+    await record("/trust");
     if (!row) {
       return c.json({ domain, found: false, note: "Not in the Agents-Trust census — treat as unverified." });
     }
@@ -154,6 +171,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
         : "known seller — see trust_tier before paying";
 
     if (stale) c.header("X-Roam-Census", "stale");
+    await record("/precheck");
     return c.json({
       url: raw,
       seller_domain_match: row?.domain ?? null,
