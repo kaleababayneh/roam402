@@ -61,7 +61,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   app.use("*", buildGuard(cfg, wallet !== null, env.RECEIPTS));
   app.use("*", await buildPaymentMiddleware(cfg));
   mountNativeRoutes(app);
-  const wrapped = buildWrappedHandler(payingFetch, receipts);
+  const wrapped = buildWrappedHandler(payingFetch, receipts, cfg);
   app.get("/r/:slug", wrapped);
   app.post("/r/:slug", wrapped);
 

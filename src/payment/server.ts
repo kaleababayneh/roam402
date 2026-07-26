@@ -20,7 +20,7 @@ import { bazaarResourceServerExtension } from "@x402/extensions";
 import { loadSignedReceipts, type SignedReceipts } from "./signedReceipts";
 import type { MiddlewareHandler } from "hono";
 import { CHALLENGE_TAG, type Config } from "../config";
-import { catalog } from "../catalog";
+import { catalog, testRoute } from "../catalog";
 import { usdString } from "../pricing";
 import { NATIVE_ROUTES, nativeRouteExtensions } from "../routes/native";
 
@@ -54,6 +54,17 @@ function buildRouteConfig(cfg: Config, signed: SignedReceipts | null): RoutesCon
       serviceName: "Roam402",
       tags: [CHALLENGE_TAG, "roam402", r.tier.toLowerCase(), r.service],
       ...(extensions ? { extensions } : {}),
+    };
+  }
+
+  const t = testRoute(cfg.testOriginUrl);
+  if (t) {
+    routes[`GET /r/${t.slug}`] = {
+      accepts: accepts(cfg, t.roamPriceUsd),
+      description: t.description,
+      mimeType: "application/json",
+      serviceName: "Roam402",
+      tags: ["roam402", "loop-test"],
     };
   }
 

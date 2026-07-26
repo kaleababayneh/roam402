@@ -34,6 +34,25 @@ export const catalog: Catalog = routesJson as Catalog;
 
 const bySlug = new Map(catalog.routes.map((r) => [r.slug, r]));
 
-export function findRoute(slug: string): WrappedRoute | undefined {
-  return bySlug.get(slug);
+/** Slug of the injected cross-chain loop-test route (testnet only). */
+export const TEST_ROUTE_SLUG = "test-sepolia";
+
+/** Synthetic route for the loop test — exists only when testOriginUrl is set. */
+export function testRoute(testOriginUrl: string | undefined): WrappedRoute | undefined {
+  if (!testOriginUrl) return undefined;
+  return {
+    slug: TEST_ROUTE_SLUG,
+    service: "mock-origin.sepolia",
+    tier: "Test",
+    method: "GET",
+    originUrl: testOriginUrl,
+    originPriceUsd: 0.001,
+    roamPriceUsd: 0.0017,
+    description:
+      "LOOP TEST (testnet only): pays a mock origin $0.001 USDC on Base Sepolia and returns its response — proves the full cross-chain path with faucet money.",
+  };
+}
+
+export function findRoute(slug: string, testOriginUrl?: string): WrappedRoute | undefined {
+  return bySlug.get(slug) ?? (slug === TEST_ROUTE_SLUG ? testRoute(testOriginUrl) : undefined);
 }

@@ -24,9 +24,6 @@ import { GatewayError, breakerOpenError, killSwitchError, spendCapError } from "
 import { log } from "../lib/log";
 import type { ReceiptStore } from "../receipts/store";
 
-/** Origin chain label for receipts — phase 1 fulfils on Base only. */
-const ORIGIN_CHAIN = "eip155:8453";
-
 export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | undefined): MiddlewareHandler {
   return async (c, next) => {
     const path = c.req.path;
@@ -37,7 +34,7 @@ export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | un
 
     if (path.startsWith("/r/")) {
       const slug = path.slice(3);
-      const route = findRoute(slug);
+      const route = findRoute(slug, cfg.testOriginUrl);
       if (!route) throw new GatewayError(`Unknown route /r/${slug}`, 404, "unknown_route");
       if (isOpen(slug)) throw breakerOpenError(slug);
       if (await isOriginDown(kv, slug)) throw breakerOpenError(slug);
@@ -50,10 +47,10 @@ export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | un
   };
 }
 
-export function buildWrappedHandler(payingFetch: typeof fetch, receipts: ReceiptStore) {
+export function buildWrappedHandler(payingFetch: typeof fetch, receipts: ReceiptStore, cfg: Config) {
   return async (c: Context): Promise<Response> => {
     const slug = c.req.param("slug") ?? "";
-    const route = findRoute(slug);
+    const route = findRoute(slug, cfg.testOriginUrl);
     // Guard already 404'd unknown slugs; this satisfies the type system.
     if (!route) throw new GatewayError(`Unknown route /r/${slug}`, 404, "unknown_route");
 
@@ -68,7 +65,7 @@ export function buildWrappedHandler(payingFetch: typeof fetch, receipts: Receipt
               contentType: c.req.header("content-type") ?? "application/json",
             }
           : { method: "GET" as const };
-      const { response, receipt } = await callOrigin(payingFetch, route.originUrl, query, ORIGIN_CHAIN, forward);
+      const { response, receipt } = await callOrigin(payingFetch, route.originUrl, query, forward);
       recordSuccess(slug);
       log("wrapped_ok", { slug, service: route.service, ms: Date.now() - started });
       await receipts.record({
@@ -77,8 +74,8 @@ export function buildWrappedHandler(payingFetch: typeof fetch, receipts: Receipt
         service: route.service,
         method: route.method,
         priceUsd: route.roamPriceUsd,
-        originReceipt: receipt.paymentResponse,
-        originChain: receipt.chain,
+        originReceipt: receipt.transaction ?? receipt.raw,
+        originChain: receipt.network,
       });
       return withReceiptHeaders(response, {
         service: route.service,

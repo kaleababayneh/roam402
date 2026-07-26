@@ -12,6 +12,7 @@
     "src/**/*.ts",
     "sdk/src/**/*.ts",
     "examples/**/*.ts",
-    "mcp/src/**/*.ts"
+    "mcp/src/**/*.ts",
+    "test/**/*.ts"
   ]
 }

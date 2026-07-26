@@ -49,6 +49,8 @@ export interface Env {
   RECEIPTS?: KVNamespace;
   /** Secret — Ed25519 private JWK enabling signed offers/receipts. */
   RECEIPT_SIGNING_JWK?: string;
+  /** Dev/testnet only — injects the /r/test-sepolia loop-test route. */
+  TEST_ORIGIN_URL?: string;
 }
 
 export interface Config {
@@ -60,6 +62,8 @@ export interface Config {
   perRequestCapUsd: number;
   /** Ed25519 private JWK (JSON) — signed receipts feature flag + key. */
   receiptSigningJwk?: string;
+  /** Loop-test origin URL — honored ONLY on testnet (never mainnet). */
+  testOriginUrl?: string;
 }
 
 export function loadConfig(env: Env): Config {
@@ -72,5 +76,6 @@ export function loadConfig(env: Env): Config {
     killSwitch: env.KILL_SWITCH === "on",
     perRequestCapUsd: Number.parseFloat(env.PER_REQUEST_CAP_USD || "1") || 1,
     receiptSigningJwk: env.RECEIPT_SIGNING_JWK,
+    testOriginUrl: network === "testnet" ? env.TEST_ORIGIN_URL || undefined : undefined,
   };
 }

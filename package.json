@@ -14,7 +14,10 @@
     "optin": "tsx scripts/optin.ts",
     "mcp": "tsx mcp/src/index.ts",
     "receipt:key": "tsx scripts/new-receipt-key.ts",
-    "verify:receipt": "tsx scripts/verify-receipt.ts"
+    "verify:receipt": "tsx scripts/verify-receipt.ts",
+    "account:evm": "tsx scripts/new-evm-account.ts",
+    "origin:dev": "tsx test/origin-server.ts",
+    "loop:test": "tsx scripts/loop-test.ts"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",
@@ -32,6 +35,7 @@
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "wrangler": "^4.24.0",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.10.0",
+    "@hono/node-server": "^2.0.12"
   }
 }
