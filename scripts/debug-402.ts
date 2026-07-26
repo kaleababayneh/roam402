@@ -16,6 +16,7 @@ const cfg: Config = {
   facilitatorUrl: "https://facilitator.goplausible.xyz",
   killSwitch: false,
   perRequestCapUsd: 1,
+  publicBaseUrl: "http://localhost:8787",
 };
 
 const app = new Hono();

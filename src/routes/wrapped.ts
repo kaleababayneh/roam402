@@ -27,7 +27,7 @@ import type { ReceiptStore } from "../receipts/store";
 export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | undefined): MiddlewareHandler {
   return async (c, next) => {
     const path = c.req.path;
-    const isPaid = path.startsWith("/r/") || path === "/trust" || path === "/precheck";
+    const isPaid = path.startsWith("/r/") || path === "/trust" || path === "/precheck" || path === "/discover";
     if (!isPaid) return next();
 
     if (cfg.killSwitch) throw killSwitchError();

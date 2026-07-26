@@ -23,6 +23,7 @@ import { CHALLENGE_TAG, type Config } from "../config";
 import { catalog, testRoute } from "../catalog";
 import { usdString } from "../pricing";
 import { NATIVE_ROUTES, nativeRouteExtensions } from "../routes/native";
+import { wrappedRouteExtensions } from "./discovery";
 
 /** One x402 payment option on our Algorand merchant, USDC-ASA denominated. */
 function accepts(cfg: Config, priceUsd: number): RouteConfig["accepts"] {
@@ -37,6 +38,9 @@ function accepts(cfg: Config, priceUsd: number): RouteConfig["accepts"] {
       // Challenge tag per the official checklist — this is how the
       // leaderboard attributes and tracks the entry.
       tag: CHALLENGE_TAG,
+      // Every 402 hands the agent the full index — the five-door strategy:
+      // touch ANY route, discover the whole catalog.
+      ...(cfg.publicBaseUrl ? { catalog: `${cfg.publicBaseUrl}/catalog` } : {}),
     },
   };
 }
@@ -47,13 +51,14 @@ function buildRouteConfig(cfg: Config, signed: SignedReceipts | null): RoutesCon
   const extensions = signed ? { ...signed.routeExtensions } : undefined;
 
   for (const r of catalog.routes) {
+    const wrappedExt = { ...extensions, ...wrappedRouteExtensions(r.slug) };
     routes[`${r.method} /r/${r.slug}`] = {
       accepts: accepts(cfg, r.roamPriceUsd),
       description: r.description,
       mimeType: "application/json",
       serviceName: "Roam402",
       tags: [CHALLENGE_TAG, "roam402", r.tier.toLowerCase(), r.service],
-      ...(extensions ? { extensions } : {}),
+      ...(Object.keys(wrappedExt).length ? { extensions: wrappedExt } : {}),
     };
   }
 

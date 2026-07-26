@@ -9,7 +9,9 @@
 import { Hono } from "hono";
 import { declareDiscoveryExtension } from "@x402/extensions";
 import type { RouteConfig } from "@x402/core/server";
+import type { Config } from "../config";
 import { GatewayError } from "../lib/errors";
+import { catalogPayload } from "./free";
 
 const AGENTS_TRUST_API = "https://api.agents-trust.ai";
 
@@ -22,6 +24,22 @@ export interface NativeRoute {
 }
 
 export const NATIVE_ROUTES: NativeRoute[] = [
+  {
+    path: "/discover",
+    priceUsd: 0.0001,
+    description:
+      "Machine-readable catalog of 50+ verified x402 services callable through this merchant — LLM inference, token security, market data — each with USDC price, Agents-Trust tier and liveness. Same payload is free at /catalog; this paid twin exists so the index itself is a discoverable x402 resource.",
+    discovery: declareDiscoveryExtension({
+      input: {},
+      output: {
+        example: {
+          name: "Roam402 — the x402 roaming gateway",
+          wrapped: [{ path: "/r/quickintel-scan-full", method: "GET", price: "$0.03", service: "quickintel.io", trust_tier: "Listed" }],
+          native: [{ path: "/trust", price: "$0.005" }],
+        },
+      },
+    }),
+  },
   {
     path: "/trust",
     priceUsd: 0.005,
@@ -90,7 +108,9 @@ async function leaderboardRows(): Promise<LeaderboardRow[]> {
 }
 
 /** Mount the native paid handlers (payment middleware runs before these). */
-export function mountNativeRoutes(app: Hono): void {
+export function mountNativeRoutes(app: Hono, cfg: Config): void {
+  app.get("/discover", (c) => c.json(catalogPayload(cfg)));
+
   app.get("/trust", async (c) => {
     const domain = (c.req.query("domain") ?? "").toLowerCase().trim();
     if (!domain) throw new GatewayError("Missing ?domain=", 400, "bad_request");

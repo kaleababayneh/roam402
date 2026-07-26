@@ -28,3 +28,5 @@ PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
 # Probes every origin unpaid every 30 min; "down" routes refuse before payment.
 # [triggers]
 # crons = ["*/30 * * * *"]
+# PUBLIC_BASE_URL: set to the real https://<domain> at deploy — advertised
+# in every 402's extra.catalog so any touched route reveals the full index.

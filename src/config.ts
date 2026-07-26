@@ -51,6 +51,8 @@ export interface Env {
   RECEIPT_SIGNING_JWK?: string;
   /** Dev/testnet only — injects the /r/test-sepolia loop-test route. */
   TEST_ORIGIN_URL?: string;
+  /** Public base URL of this gateway (set at deploy) — advertised in 402s. */
+  PUBLIC_BASE_URL?: string;
 }
 
 export interface Config {
@@ -64,6 +66,8 @@ export interface Config {
   receiptSigningJwk?: string;
   /** Loop-test origin URL — honored ONLY on testnet (never mainnet). */
   testOriginUrl?: string;
+  /** Public base URL advertised in every 402's extra.catalog ("" = omit). */
+  publicBaseUrl: string;
 }
 
 export function loadConfig(env: Env): Config {
@@ -77,5 +81,6 @@ export function loadConfig(env: Env): Config {
     perRequestCapUsd: Number.parseFloat(env.PER_REQUEST_CAP_USD || "1") || 1,
     receiptSigningJwk: env.RECEIPT_SIGNING_JWK,
     testOriginUrl: network === "testnet" ? env.TEST_ORIGIN_URL || undefined : undefined,
+    publicBaseUrl: (env.PUBLIC_BASE_URL || "").replace(/\/$/, ""),
   };
 }
