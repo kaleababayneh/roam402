@@ -19,7 +19,9 @@
     "origin:dev": "tsx test/origin-server.ts",
     "loop:test": "tsx scripts/loop-test.ts",
     "latency": "tsx scripts/latency-test.ts",
-    "trace": "tsx scripts/trace-x402.ts"
+    "trace": "tsx scripts/trace-x402.ts",
+    "predev": "node scripts/free-port.mjs 8787",
+    "preorigin:dev": "node scripts/free-port.mjs 8988"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",

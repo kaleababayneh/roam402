@@ -19,7 +19,7 @@ import { x402Client } from "@x402/core/client";
 import { wrapFetchWithPayment, decodePaymentResponseHeader } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import type { PrivateKeyAccount } from "viem/accounts";
-import { originError } from "../lib/errors";
+import { GatewayError, originError, originTimeout, originUnreachable } from "../lib/errors";
 import type { OriginReceipt } from "../payment/receipts";
 
 const ORIGIN_TIMEOUT_MS = 25_000;
@@ -71,7 +71,7 @@ export async function callOrigin(
     : originUrl;
 
   const method = forward?.method ?? "GET";
-  const res = await payingFetch(url, {
+  const init: RequestInit = {
     method,
     signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS),
     headers: {
@@ -81,7 +81,37 @@ export async function callOrigin(
         : {}),
     },
     ...(method === "POST" && forward?.body != null ? { body: forward.body } : {}),
+  };
+
+  // PREFLIGHT (unpaid, plain fetch — a 402 reply proves the origin is alive
+  // and x402-speaking). Free to retry because no money can move here; this
+  // converts most transport flakes into pre-payment failures.
+  const preflight = async (): Promise<void> => {
+    try {
+      await fetch(url, init);
+    } catch (err) {
+      throw err instanceof Error && err.name === "TimeoutError" ? originTimeout() : originUnreachable();
+    }
+  };
+  await preflight().catch(async () => {
+    await new Promise((r) => setTimeout(r, 300));
+    await preflight();
   });
+
+  // PAY EXACTLY ONCE. payingFetch pays on every invocation, so there are NO
+  // automatic retries past this line — a transport failure here has unknown
+  // payment state and must not be auto-repeated (retryable: false).
+  let res: Response;
+  try {
+    res = await payingFetch(url, init);
+  } catch {
+    throw new GatewayError(
+      "Origin delivery failed after payment may have been sent — not auto-retried",
+      502,
+      "origin_delivery_failed",
+      false
+    );
+  }
 
   if (!res.ok) throw originError(res.status);
 

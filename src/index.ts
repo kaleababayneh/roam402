@@ -47,7 +47,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
 
   app.onError((err, c) => {
     if (err instanceof GatewayError) {
-      return c.json({ error: err.code, message: err.message }, err.status as 400);
+      return c.json({ error: err.code, message: err.message, retryable: err.retryable }, err.status as 400);
     }
     log("unhandled_error", { message: err instanceof Error ? err.message : String(err) });
     return c.json({ error: "internal", message: "Unexpected gateway error" }, 500);
@@ -60,7 +60,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   mountFreeRoutes(app, cfg, wallet !== null);
   app.use("*", buildGuard(cfg, wallet !== null, env.RECEIPTS));
   app.use("*", await buildPaymentMiddleware(cfg));
-  mountNativeRoutes(app, cfg);
+  mountNativeRoutes(app, cfg, env.RECEIPTS);
   const wrapped = buildWrappedHandler(payingFetch, receipts, cfg);
   app.get("/r/:slug", wrapped);
   app.post("/r/:slug", wrapped);

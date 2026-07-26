@@ -12,8 +12,9 @@ import type { RouteConfig } from "@x402/core/server";
 import type { Config } from "../config";
 import { GatewayError } from "../lib/errors";
 import { catalogPayload } from "./free";
-
-const AGENTS_TRUST_API = "https://api.agents-trust.ai";
+import { censusRows } from "../lib/census";
+import { catalog } from "../catalog";
+import { getRouteHealth } from "../fulfillment/health";
 
 export interface NativeRoute {
   path: string;
@@ -61,7 +62,7 @@ export const NATIVE_ROUTES: NativeRoute[] = [
     path: "/precheck",
     priceUsd: 0.002,
     description:
-      "Pre-flight safety check before your agent pays an unknown x402 endpoint: known-seller match, trust tier, liveness, and price sanity vs catalogued price. Query: ?url=https://…",
+      "Pre-flight safety check before your agent pays an x402 endpoint: known-seller match + trust tier from the Agents-Trust census, and — for endpoints in the Roam402 catalog — the catalogued price, our route, and the last liveness probe verdict. Query: ?url=https://…",
     discovery: declareDiscoveryExtension({
       input: { url: "https://blockrun.ai/api/v1/chat/completions" },
       inputSchema: {
@@ -82,41 +83,25 @@ export function nativeRouteExtensions(path: string): RouteConfig["extensions"] {
   return route?.discovery as RouteConfig["extensions"];
 }
 
-async function fetchAgentsTrust(path: string): Promise<unknown> {
-  const res = await fetch(`${AGENTS_TRUST_API}${path}`, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new GatewayError("Trust index unavailable", 502, "index_error");
-  return res.json();
-}
-
-interface LeaderboardRow {
-  domain?: string;
-  display_name?: string;
-  trust_tier?: string;
-  trust_score?: string | number | null;
-  verified_volume_usd_total?: string | null;
-  verified_tx_total?: string | null;
-  first_settlement_at?: string | null;
-  [k: string]: unknown;
-}
-
-async function leaderboardRows(): Promise<LeaderboardRow[]> {
-  const body = (await fetchAgentsTrust("/q/leaderboard")) as { data?: LeaderboardRow[] };
-  return body.data ?? [];
+async function leaderboardRows() {
+  try {
+    return await censusRows();
+  } catch {
+    throw new GatewayError("Trust index unavailable", 502, "index_error");
+  }
 }
 
 /** Mount the native paid handlers (payment middleware runs before these). */
-export function mountNativeRoutes(app: Hono, cfg: Config): void {
+export function mountNativeRoutes(app: Hono, cfg: Config, kv: KVNamespace | undefined): void {
   app.get("/discover", (c) => c.json(catalogPayload(cfg)));
 
   app.get("/trust", async (c) => {
     const domain = (c.req.query("domain") ?? "").toLowerCase().trim();
     if (!domain) throw new GatewayError("Missing ?domain=", 400, "bad_request");
 
-    const rows = await leaderboardRows();
+    const { rows, stale } = await leaderboardRows();
     const row = rows.find((r) => (r.domain ?? "").toLowerCase() === domain);
+    if (stale) c.header("X-Roam-Census", "stale");
     if (!row) {
       return c.json({ domain, found: false, note: "Not in the Agents-Trust census — treat as unverified." });
     }
@@ -135,27 +120,53 @@ export function mountNativeRoutes(app: Hono, cfg: Config): void {
 
   app.get("/precheck", async (c) => {
     const raw = c.req.query("url") ?? "";
-    let host: string;
+    let target: URL;
     try {
-      host = new URL(raw).hostname.toLowerCase();
+      target = new URL(raw);
     } catch {
       throw new GatewayError("Missing or invalid ?url=", 400, "bad_request");
     }
+    const host = target.hostname.toLowerCase();
 
-    const rows = await leaderboardRows();
+    // Seller identity: census match by domain (exact or subdomain).
+    const { rows, stale } = await leaderboardRows();
     const row = rows.find(
       (r) => (r.domain ?? "").toLowerCase() === host || host.endsWith(`.${(r.domain ?? "").toLowerCase()}`)
     );
+
+    // Catalog match: is this exact endpoint one we wrap? Then we can also
+    // report its catalogued price, our route, and the last probe verdict.
+    const catRoute = catalog.routes.find((r) => {
+      try {
+        const o = new URL(r.originUrl);
+        return o.hostname.toLowerCase() === host && o.pathname === target.pathname;
+      } catch {
+        return false;
+      }
+    });
+    const health = catRoute ? await getRouteHealth(kv, catRoute.slug) : null;
+
+    const verdict = !row
+      ? "unknown seller — no settlement history in the census; pay with caution"
+      : health?.status === "down"
+        ? "known seller but the endpoint failed its last liveness probe — do not pay"
+        : "known seller — see trust_tier before paying";
+
+    if (stale) c.header("X-Roam-Census", "stale");
     return c.json({
       url: raw,
       seller_domain_match: row?.domain ?? null,
       known_seller: !!row,
       trust_tier: row?.trust_tier ?? "Unknown",
       trust_score: row?.trust_score ?? null,
-      verdict: row
-        ? "known seller — see trust_tier before paying"
-        : "unknown seller — no settlement history in the census; pay with caution",
-      source: "agents-trust.com census",
+      in_roam_catalog: !!catRoute,
+      roam_route: catRoute ? `/r/${catRoute.slug}` : null,
+      catalogued_price_usd: catRoute?.originPriceUsd ?? null,
+      liveness: health
+        ? { status: health.status, checked_at: health.at }
+        : { status: "unprobed", checked_at: null },
+      verdict,
+      source: "agents-trust.com census + roam402 catalog probes",
     });
   });
 }

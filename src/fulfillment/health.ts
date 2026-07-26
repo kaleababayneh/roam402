@@ -100,6 +100,17 @@ export async function isOriginDown(kv: KVNamespace | undefined, slug: string): P
   }
 }
 
+/** Read a route's last probe verdict (null = never probed / no KV). */
+export async function getRouteHealth(kv: KVNamespace | undefined, slug: string): Promise<RouteHealth | null> {
+  if (!kv) return null;
+  try {
+    const raw = await kv.get(`${KEY_PREFIX}${slug}`);
+    return raw ? (JSON.parse(raw) as RouteHealth) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getHealthSummary(kv: KVNamespace | undefined): Promise<HealthSummary | null> {
   if (!kv) return null;
   try {
