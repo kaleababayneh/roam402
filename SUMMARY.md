@@ -171,6 +171,34 @@ for blockrun.ai" — the second one settles real USDC.
 **Scoreboard page**: `cd ../agentscan && git checkout algorand && pnpm dev`
 → http://localhost:3000/algorand/ (also `pnpm test` → 619 green).
 
+## 5b. Concurrency & money-safety findings (soak test, 2026-07-26)
+
+`pnpm soak [n]` fires N simultaneous paid calls and then asserts the
+AGGREGATE ledger on both chains. What it proved:
+
+- **Money-safety holds under load.** Every soak run PASSES its ledger
+  assertion: successes ⇔ exactly that many payments on both chains — no
+  double-pay, no phantom charge. Failed requests fail *cleanly* (before or
+  without leaving a paid-but-undelivered leak).
+- **Single call: exact and reliable.** Loop test green every time.
+- **Throughput ceiling ≈ 2–3 concurrent** against the mock origin + the
+  shared GoPlausible facilitator. Each end-to-end call is ~4 facilitator
+  round-trips (our verify+settle + the origin's verify+settle), so a burst
+  serialises on the facilitator; excess calls 502. This is largely
+  (a) a test-rig limit — the mock origin is a single Node process; real
+  origins (blockrun, quickintel) scale — and (b) a shared-ecosystem limit
+  every entrant hits, not a roam402 bug.
+- **A client-side outbound limiter was tried and REVERTED** — an in-isolate
+  queue holds requests past workerd's hang-detection deadline and turns
+  load into 500s. The wrong tool; documented so nobody re-adds it.
+
+Production takeaway: the leaderboard is measured over a window, so sustained
+sequential throughput matters more than burst concurrency. What we control —
+no leak, clean fails, `retryable` signals, per-route breaker shedding dead
+origins — holds. The residual paid-but-undelivered risk (origin settles,
+delivery fails) is bounded at the origin price, in the safe direction
+(buyer never overcharged), and accepted like a merchant accepts chargebacks.
+
 ## 6. What we missed / open gaps (honest list)
 
 1. ~~The full cross-chain loop is unproven~~ — **PROVEN 2026-07-26** on
