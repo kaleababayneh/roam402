@@ -69,29 +69,45 @@ attach a **declared discovery extension to each route**; the merchant page
 is enriched from **domain metadata, logo, agentic files, well-known
 structures, and NFD**.
 
-We do NOT dump 52 undifferentiated routes. Three tiers:
+We do NOT dump 52 undifferentiated routes — the 466-listing merchant with
+$21 settled is the cautionary tale. **Five curated doors in the Bazaar; the
+full catalog behind door #1.** Listing few costs zero leaderboard credit
+(rollup is by payTo, not by Bazaar visibility).
 
-**Tier A — flagships (hand-written copy + full discovery schemas):**
+**The five listed doors:**
 
-| Route | Listing description (Bazaar copy) |
-|---|---|
-| `POST /v1/chat/completions` *(new alias, §5.2)* | "OpenAI-compatible chat completions, pay-per-call: $0.00062 USDC per request on Algorand, no account, no key — point any OpenAI SDK at this baseURL. Fulfilled by BlockRun on Base with dual-chain receipts." |
-| `GET /trust?domain=` | "Trust report for any x402 seller: Agents-Trust tier (Corroborated/Established/Emerging/Listed), 0–100 score, verified on-chain volume and evidence pillars from $45M+ of indexed settlement. Returns JSON verdict in <1s." |
-| `GET /precheck?url=` | "Pre-flight safety check before your agent pays an unknown x402 endpoint: known-seller match, trust tier, liveness and price sanity. $0.002 insurance against dead or scam endpoints." |
-| `POST /bundle/token-diligence` *(new, §5.1)* | "One call, full token due-diligence: QuickIntel security scan + market context + Agents-Trust seller verification, synthesized into a single JSON verdict with per-source receipts." |
-| `GET /r/quickintel-scan-full` | "Full token security scan for any EVM token (honeypot, taxes, LP locks, contract risks) by QuickIntel — the highest-volume security API in the x402 economy — payable in USDC on Algorand." |
+| Listed endpoint | Role | Bazaar copy |
+|---|---|---|
+| `GET /catalog` (listed as a resource itself) | **The master key** | "Machine-readable catalog of 50+ verified x402 services callable through this merchant — LLM inference, token security, market data — each with USDC price, trust tier and liveness. Free." |
+| `GET /trust?domain=` | Sole-provider native | "Trust report for any x402 seller: Agents-Trust tier, 0–100 score, verified on-chain volume from $45M+ of indexed settlement." |
+| `GET /precheck?url=` | Sole-provider native | "Pre-flight safety check before your agent pays an unknown x402 endpoint: known-seller match, tier, liveness, price sanity. $0.002 insurance." |
+| `POST /bundle/token-diligence` | Our composed product | "One call, full token due-diligence: QuickIntel security scan + market context + Agents-Trust verification, one JSON verdict, per-source receipts." |
+| `GET /r/quickintel-scan-full` | Category-proof wrap | "Full token security scan (honeypot, taxes, LP locks, contract risk) by QuickIntel — via Roam402, payable in USDC on Algorand." |
 
-**Tier B — top-10 wraps**: audited one-by-one so each description names the
-concrete deliverable (current generated copy is close; audit pass in P2b).
-Add `declareDiscoveryExtension` with input/output examples — for wraps we
-CAN honestly schema (blockrun's OpenAI body is publicly documented; most
-GET routes are single-param). *(Backlog: today only native routes carry
-schemas.)*
+*(Positioning per Kaleab: vendor of others' services + sole provider only
+of trust. The OpenAI-compatible `/v1/chat/completions` alias is PARKED —
+note it needs no API keys from us either way; it's the same x402-paid wrap.)*
 
-**Tier C — long tail (~40 routes)**: generated descriptions (already
-follow "what you get · provenance · rails" format), listed for catalog
-breadth — breadth is the story ("Algorand's biggest catalog"), Tier A is
-the revenue.
+**How agents discover the other 45 (→95+):**
+1. `/catalog` free JSON — SDK + MCP read it live (`roam_catalog`), so every
+   integration auto-reflects catalog growth with no republishing.
+2. **Every 402 advertises the index** — build item: add
+   `catalog: "https://<domain>/catalog"` to `extra` on every challenge, so
+   touching ANY route hands the agent the full map inside the protocol
+   response (and the Bazaar records inherit it).
+3. `/llms.txt` + `/.well-known/agents.json` (agentic crawler surfaces).
+4. SDK/MCP distribution — discovery as a function call, not browsing.
+
+**Scaling 50 → 100+:** the catalog is generated, not written. Census
+supply: 2,811 wrappable endpoints (2,469 live-probed). Growth = raise the
+generator knobs (MAX_ROUTES / MAX_PER_SERVICE / price cap / volume
+threshold), review the committed JSON diff, redeploy — zero marginal code
+per route; guards, receipts, health, tag all inherited. Cadence: weekly
+regeneration (prices track origins; dead endpoints fall out via the health
+sweep). Wave 2 mid-Aug → ~100; wave 3 Sept → entrant wraps
+(Algorand-native) + Solana fulfilment if demand justifies a second
+treasury. Real scaling constraint = Base float; wallet-balance alerting
+becomes mandatory at wave 2.
 
 **Merchant-page enrichment checklist** (the "shiny, data-enriched" note):
 - ✅ landing with metadata/OG, `/llms.txt`, `/.well-known/agents.json`
