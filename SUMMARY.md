@@ -173,12 +173,14 @@ for blockrun.ai" — the second one settles real USDC.
 
 ## 6. What we missed / open gaps (honest list)
 
-1. **The full cross-chain loop is code-complete but UNPROVEN** — biggest
-   gap. We've never executed: buyer pays Algorand → gateway pays a Base
-   origin from the hot wallet → response + dual receipts. Blocked on
-   funding the Base wallet (origins are mainnet Base; there is no
-   testnet version of the real economy). First action after funding:
-   `/r/blockrun-chat-completions` at $0.0001 origin cost.
+1. ~~The full cross-chain loop is unproven~~ — **PROVEN 2026-07-26** on
+   pure testnets (Algorand testnet in → Base SEPOLIA out via the same
+   facilitator, faucet money only): buyer −$0.0017 / merchant +$0.0017 on
+   Algorand, hot −$0.001 / origin seller +$0.001 on Sepolia — asserted
+   on-chain, margin model exact; origin settlement decoded into the
+   receipt (eip155:84532, tx 0xf9a98aec…132f75). Rerun any time:
+   `pnpm origin:dev` + `pnpm dev` + `pnpm loop:test`. Remaining flavor of
+   the gap: first MAINNET-origin call (real Base) after float funding.
 2. **Playground Pera flow is beta and browser-untested** (esm.sh builds +
    Pera signer adapter written but never clicked through). Inspect-402
    tier is verified working.
