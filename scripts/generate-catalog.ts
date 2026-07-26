@@ -27,8 +27,9 @@ const VOLUME_QUALIFY_30D_USD = 100;
 
 // Margin model — MUST match src/pricing.ts (duplicated here so the script
 // stays runnable standalone; the committed output is the contract).
+// TRACTION PRICING: zero margin — charge exactly the origin price.
 const roamPriceUsd = (origin: number): number =>
-  Math.ceil((origin * 1.2 + 0.0005) * 1_000_000) / 1_000_000;
+  Math.ceil(origin * 1_000_000) / 1_000_000;
 
 interface LbRow {
   entity_id: string;

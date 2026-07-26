@@ -111,10 +111,10 @@ const d = {
 console.log("deltas:", d);
 
 const ok =
-  d.buyer === -0.0017 && d.merchant === 0.0017 && d.hot === -0.001 && d.seller === 0.001;
+  d.buyer === -0.001 && d.merchant === 0.001 && d.hot === -0.001 && d.seller === 0.001;
 console.log(
   ok
     ? "\n✅ FULL CROSS-CHAIN LOOP PROVEN — Algorand in, Sepolia out, both ledgers exact."
-    : "\n✗ deltas do not match expectations (buyer −0.0017 / merchant +0.0017 / hot −0.001 / seller +0.001)"
+    : "\n✗ deltas do not match expectations (buyer −0.001 / merchant +0.001 / hot −0.001 / seller +0.001)"
 );
 process.exit(ok ? 0 : 1);

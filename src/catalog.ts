@@ -47,7 +47,7 @@ export function testRoute(testOriginUrl: string | undefined): WrappedRoute | und
     method: "GET",
     originUrl: testOriginUrl,
     originPriceUsd: 0.001,
-    roamPriceUsd: 0.0017,
+    roamPriceUsd: 0.001,
     description:
       "LOOP TEST (testnet only): pays a mock origin $0.001 USDC on Base Sepolia and returns its response — proves the full cross-chain path with faucet money.",
   };

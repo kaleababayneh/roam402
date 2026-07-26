@@ -1,13 +1,17 @@
 /**
  * src/pricing.ts — the margin model, in one place.
  *
- * roamPrice = originPrice × (1 + MARGIN) + FLAT_FEE, rounded UP to a
- * micro-USDC so we can never round into a loss. Native routes (no origin
- * cost) price themselves directly.
+ * TRACTION PRICING (since 2026-07-26): zero margin — we charge exactly the
+ * origin price, rounded UP to a micro-USDC so rounding can never produce a
+ * loss. Rationale: the leaderboard rewards volume, and price parity removes
+ * the only reason not to route through us. Raising later = bump these two
+ * constants + `pnpm catalog:generate` (mirror the change in
+ * scripts/generate-catalog.ts). Native routes (no origin cost) price
+ * themselves directly.
  */
 
-const MARGIN = 0.2;
-const FLAT_FEE_USD = 0.0005;
+const MARGIN = 0;
+const FLAT_FEE_USD = 0;
 
 /** Gateway price in USD for a wrapped route. */
 export function roamPriceUsd(originPriceUsd: number): number {
