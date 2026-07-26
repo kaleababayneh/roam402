@@ -19,21 +19,20 @@ routes = [
 #   BASE_WALLET_PRIVATE_KEY — hot wallet that pays origin services on Base.
 [vars]
 NETWORK = "testnet"
-PAY_TO_ADDRESS = ""                       # set after account creation (RUNBOOK step 1)
+PAY_TO_ADDRESS = "3CPTPCRK7LVRIH3LKNJBWH7PHIYWLPYCQPDX3SDZSX4XCXMSSLNSGEDY3Q" # TESTNET staging merchant — replace at mainnet cutover
 FACILITATOR_URL = "https://facilitator.goplausible.xyz"
 KILL_SWITCH = "off"                       # "on" → every paid route returns 503
 PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
 PUBLIC_BASE_URL = "https://roam402.com"   # advertised in every 402's extra.catalog (.dev.vars overrides locally)
 
 # ── Receipts log (optional, recommended before mainnet) ──────────────────────
-# wrangler kv namespace create RECEIPTS   → paste the id below, uncomment.
-# [[kv_namespaces]]
-# binding = "RECEIPTS"
-# id = "<paste-id>"
+[[kv_namespaces]]
+binding = "RECEIPTS"
+id = "cfc83c76e8174a149f63aed0e915529b"
 
 # ── Self-healing catalog (enable with the KV binding above at deploy) ────────
 # Probes every origin unpaid every 30 min; "down" routes refuse before payment.
-# [triggers]
-# crons = ["*/30 * * * *"]
+[triggers]
+crons = ["*/30 * * * *"]
 # PUBLIC_BASE_URL: set to the real https://<domain> at deploy — advertised
 # in every 402's extra.catalog so any touched route reveals the full index.

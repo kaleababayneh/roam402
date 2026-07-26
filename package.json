@@ -23,7 +23,8 @@
     "predev": "node scripts/free-port.mjs 8787",
     "preorigin:dev": "node scripts/free-port.mjs 8988",
     "test": "vitest run",
-    "soak": "tsx scripts/soak-test.ts"
+    "soak": "tsx scripts/soak-test.ts",
+    "ship": "wrangler deploy"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",
