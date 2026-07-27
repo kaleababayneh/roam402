@@ -18,10 +18,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const API = "https://api.agents-trust.ai";
-const MAX_ROUTES = 50;
-const MAX_PER_SERVICE = 3;
+const MAX_ROUTES = 2500;
+const MAX_PER_SERVICE = 5;
 const PRICE_CAP_USD = 1.0;
-const TIER_RANK: Record<string, number> = { Corroborated: 3, Established: 2 };
+const TIER_RANK: Record<string, number> = { Corroborated: 3, Established: 2, Emerging: 1 };
 /** Proven demand qualifies regardless of tier — buyers vote with USDC. */
 const VOLUME_QUALIFY_30D_USD = 100;
 
@@ -36,6 +36,7 @@ interface LbRow {
   domain: string;
   display_name: string;
   trust_tier: string;
+  category: string;
   verified_volume_usd_total: string | null;
   verified_last_30d_volume: string | null;
 }
@@ -54,6 +55,7 @@ interface WrappedRoute {
   slug: string;
   service: string;
   tier: string;
+  category: string;
   method: "GET" | "POST";
   originUrl: string;
   originPriceUsd: number;
@@ -67,10 +69,19 @@ const num = (s: string | null): number => {
 };
 
 async function q<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
-  const body = (await res.json()) as { data: T };
-  return body.data;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(`${API}${path}`, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
+      const body = (await res.json()) as { data: T };
+      return body.data;
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+  throw lastErr;
 }
 
 function isBaseSide(ep: RawEndpoint): boolean {
@@ -192,6 +203,7 @@ async function main(): Promise<void> {
         slug: slugify(row.domain, ep.url!, taken),
         service: row.domain,
         tier: row.trust_tier,
+        category: row.category ?? "other",
         method: (ep.catalog_method ?? "GET").toUpperCase() === "POST" ? "POST" : "GET",
         originUrl: ep.url!,
         originPriceUsd: ep.price_usd!,
@@ -199,7 +211,7 @@ async function main(): Promise<void> {
         description: describe(epForDesc, row),
       });
     }
-    if (picked.length) console.log(`  + ${row.domain} (${row.trust_tier}) → ${picked.length} route(s)`);
+
   }
 
   const out = {
@@ -207,6 +219,19 @@ async function main(): Promise<void> {
     source: "agents-trust.ai public API (q/leaderboard + q/service_detail)",
     routes,
   };
+  // Aggregate review report — at this scale you review the shape, not lines.
+  const byTier = new Map<string, number>();
+  const byCat = new Map<string, number>();
+  const services = new Set<string>();
+  for (const r of routes) {
+    byTier.set(r.tier, (byTier.get(r.tier) ?? 0) + 1);
+    byCat.set(r.category, (byCat.get(r.category) ?? 0) + 1);
+    services.add(r.service);
+  }
+  console.log(`services: ${services.size} · routes: ${routes.length}`);
+  console.log("by tier:", Object.fromEntries([...byTier.entries()].sort((a, b) => b[1] - a[1])));
+  console.log("by category:", Object.fromEntries([...byCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)));
+
   const here = dirname(fileURLToPath(import.meta.url));
   const dest = join(here, "..", "catalog", "routes.json");
   mkdirSync(dirname(dest), { recursive: true });

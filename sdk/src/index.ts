@@ -71,7 +71,15 @@ export interface CatalogEntry {
   price: string;
   service?: string;
   trust_tier?: string;
+  category?: string;
   description: string;
+}
+
+export interface CatalogFilter {
+  q?: string;
+  category?: string;
+  service?: string;
+  limit?: number;
 }
 
 export interface RoamClient {
@@ -81,8 +89,8 @@ export interface RoamClient {
   trust(domain: string): Promise<TrustReport>;
   /** Pre-flight safety check for any x402 endpoint URL (paid, $0.0002). */
   precheck(url: string): Promise<PrecheckReport>;
-  /** Free machine-readable catalog of everything callable. */
-  catalog(): Promise<{ native: CatalogEntry[]; wrapped: CatalogEntry[] }>;
+  /** Free machine-readable catalog; pass a filter to search server-side. */
+  catalog(filter?: CatalogFilter): Promise<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[] }>;
   /** The payment-enabled fetch, for calling the gateway directly. */
   fetch: typeof fetch;
 }
@@ -120,7 +128,15 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
 
     precheck: (url: string) => getJson<PrecheckReport>(`/precheck?url=${encodeURIComponent(url)}`),
 
-    catalog: () => getJson<{ native: CatalogEntry[]; wrapped: CatalogEntry[] }>("/catalog"),
+    catalog: (filter?: CatalogFilter) => {
+      const params = new URLSearchParams();
+      if (filter?.q) params.set("q", filter.q);
+      if (filter?.category) params.set("category", filter.category);
+      if (filter?.service) params.set("service", filter.service);
+      if (filter?.limit) params.set("limit", String(filter.limit));
+      const qs = params.size ? `?${params}` : "";
+      return getJson<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[] }>(`/catalog${qs}`);
+    },
   };
 }
 

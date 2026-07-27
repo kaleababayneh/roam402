@@ -18,8 +18,14 @@ import { log } from "../lib/log";
 
 const PROBE_TIMEOUT_MS = 8_000;
 const CONCURRENCY = 5;
+/** Routes probed per cron invocation — the full catalog is swept in rotating
+ *  slices so a single scheduled run stays well inside Workers limits.
+ *  2,300 routes ÷ 200 per run × 30-min cron ≈ full sweep every ~6h; the
+ *  guard's 24h verdict TTL tolerates that comfortably. */
+const SLICE_SIZE = 200;
 const KEY_PREFIX = "health:route:";
 const KEY_SUMMARY = "health:summary";
+const KEY_CURSOR = "health:cursor";
 /** A stale verdict must not refuse traffic forever. */
 const VERDICT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -36,6 +42,8 @@ export interface HealthSummary {
   live: number;
   reachable: number;
   down: number;
+  /** Which rotating slice this run covered, e.g. "200-400/2300". */
+  slice?: string;
 }
 
 async function probeOrigin(url: string, method: "GET" | "POST"): Promise<RouteHealth> {
@@ -55,9 +63,17 @@ async function probeOrigin(url: string, method: "GET" | "POST"): Promise<RouteHe
   }
 }
 
-/** Probe every catalog origin (bounded concurrency), persist verdicts. */
+/** Probe the next SLICE of catalog origins (bounded concurrency), persist
+ *  verdicts, advance the rotating cursor. */
 export async function runHealthSweep(kv: KVNamespace): Promise<HealthSummary> {
-  const routes = catalog.routes;
+  let cursor = 0;
+  try {
+    cursor = Number((await kv.get(KEY_CURSOR)) ?? 0) || 0;
+  } catch { /* start at 0 */ }
+  const all = catalog.routes;
+  const routes = all.slice(cursor, cursor + SLICE_SIZE);
+  const nextCursor = cursor + SLICE_SIZE >= all.length ? 0 : cursor + SLICE_SIZE;
+  await kv.put(KEY_CURSOR, String(nextCursor)).catch(() => {});
   const results = new Map<string, RouteHealth>();
 
   let i = 0;
@@ -76,6 +92,7 @@ export async function runHealthSweep(kv: KVNamespace): Promise<HealthSummary> {
     live: 0,
     reachable: 0,
     down: 0,
+    slice: `${cursor}-${cursor + routes.length}/${all.length}`,
   };
   for (const [slug, health] of results) {
     summary[health.status] += 1;

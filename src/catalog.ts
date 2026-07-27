@@ -15,6 +15,8 @@ export interface WrappedRoute {
   service: string;
   /** Agents-Trust trust tier at generation time. */
   tier: string;
+  /** Census category (e.g. market_data, ai_inference). */
+  category: string;
   method: "GET" | "POST";
   originUrl: string;
   originPriceUsd: number;
@@ -44,6 +46,7 @@ export function testRoute(testOriginUrl: string | undefined): WrappedRoute | und
     slug: TEST_ROUTE_SLUG,
     service: "mock-origin.sepolia",
     tier: "Test",
+    category: "loop-test",
     method: "GET",
     originUrl: testOriginUrl,
     originPriceUsd: 0.001,

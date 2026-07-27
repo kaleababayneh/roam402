@@ -51,17 +51,42 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
     {
       title: "Browse the Roam402 catalog",
       description:
-        "FREE. List every x402 service callable through Roam402 on Algorand: route slugs, USDC prices, origin services, and Agents-Trust tiers. Call this first to discover capabilities.",
-      inputSchema: {},
+        "FREE. Discover x402 services callable through Roam402 on Algorand. WITHOUT arguments: a compact summary (categories + top services). WITH search/category/service: matching routes with slugs and USDC prices. Drill down rather than listing everything — the catalog holds 700+ services.",
+      inputSchema: {
+        search: z.string().optional().describe("Free-text search over route, service and description"),
+        category: z.string().optional().describe("Filter by category, e.g. market_data, ai_inference"),
+        service: z.string().optional().describe("Filter by origin service domain, e.g. quickintel.io"),
+      },
     },
-    async () => {
+    async ({ search, category, service }) => {
       try {
-        const cat = await roam.catalog();
+        if (!search && !category && !service) {
+          // Summary mode: categories with counts + the native trust layer.
+          const cat = await roam.catalog();
+          const byCategory = new Map<string, { routes: number; services: Set<string> }>();
+          for (const w of cat.wrapped) {
+            const k = w.category ?? "other";
+            const e = byCategory.get(k) ?? { routes: 0, services: new Set<string>() };
+            e.routes += 1;
+            if (w.service) e.services.add(w.service);
+            byCategory.set(k, e);
+          }
+          const lines = [
+            `ROAM402 CATALOG — ${byCategory.size} categories · ${new Set(cat.wrapped.map((w) => w.service)).size} services · ${cat.wrapped.length} routes`,
+            "",
+            "NATIVE (trust layer):",
+            ...cat.native.map((n) => `  ${n.path} · ${n.price} — ${n.description.slice(0, 100)}`),
+            "",
+            "CATEGORIES (call again with {category} or {search} to drill down):",
+            ...[...byCategory.entries()]
+              .sort((a, b) => b[1].routes - a[1].routes)
+              .map(([k, e]) => `  ${k}: ${e.services.size} services · ${e.routes} routes`),
+          ];
+          return ok(clip(lines.join("\n")));
+        }
+        const cat = await roam.catalog({ q: search, category, service, limit: 60 });
         const lines = [
-          "NATIVE (trust layer):",
-          ...cat.native.map((n) => `  ${n.path} · ${n.price} — ${n.description.slice(0, 110)}`),
-          "",
-          `WRAPPED (${cat.wrapped.length} routes):`,
+          `MATCHES (${cat.wrapped.length}${cat.wrapped.length === 60 ? "+, narrow your filter" : ""}):`,
           ...cat.wrapped.map(
             (w) => `  ${w.path} · ${w.price} · ${w.service} (${w.trust_tier}) — ${w.description.slice(0, 90)}`
           ),

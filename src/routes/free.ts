@@ -27,12 +27,14 @@ export function catalogPayload(cfg: Config): Record<string, unknown> {
       price: usdString(n.priceUsd),
       description: n.description,
     })),
+    categories: [...new Set(catalog.routes.map((r) => r.category))].sort(),
     wrapped: catalog.routes.map((r) => ({
       path: `/r/${r.slug}`,
       method: r.method,
       price: usdString(r.roamPriceUsd),
       service: r.service,
       trust_tier: r.tier,
+      category: r.category,
       description: r.description,
     })),
     generatedAt: catalog.generatedAt,
@@ -55,5 +57,28 @@ export function mountFreeRoutes(app: Hono<AppEnv>, cfg: Config, hasWallet: boole
     })
   );
 
-  app.get("/catalog", (c) => c.json(catalogPayload(cfg)));
+  // /catalog?q=&category=&service=&limit= — server-side filtering so no
+  // client ever needs the full list to find one capability.
+  app.get("/catalog", (c) => {
+    const q = (c.req.query("q") ?? "").toLowerCase();
+    const category = (c.req.query("category") ?? "").toLowerCase();
+    const service = (c.req.query("service") ?? "").toLowerCase();
+    const limit = Math.min(500, Number(c.req.query("limit")) || 500);
+    const payload = catalogPayload(cfg) as { wrapped: { path: string; service?: string; trust_tier?: string; description: string; category?: string }[] } & Record<string, unknown>;
+    if (q || category || service) {
+      payload.wrapped = payload.wrapped
+        .filter(
+          (w) =>
+            (!q || `${w.path} ${w.service} ${w.description}`.toLowerCase().includes(q)) &&
+            (!category || (w.category ?? "").toLowerCase().includes(category)) &&
+            (!service || (w.service ?? "").toLowerCase().includes(service))
+        )
+        .slice(0, limit);
+      payload.filtered = true;
+    } else if (payload.wrapped.length > limit) {
+      payload.wrapped = payload.wrapped.slice(0, limit);
+      payload.truncated = true;
+    }
+    return c.json(payload);
+  });
 }
