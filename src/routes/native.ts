@@ -85,9 +85,9 @@ export function nativeRouteExtensions(path: string): RouteConfig["extensions"] {
   return route?.discovery as RouteConfig["extensions"];
 }
 
-async function leaderboardRows() {
+async function leaderboardRows(kv?: KVNamespace) {
   try {
-    return await censusRows();
+    return await censusRows(kv);
   } catch {
     throw new GatewayError("Trust index unavailable", 502, "index_error");
   }
@@ -116,7 +116,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     const domain = (c.req.query("domain") ?? "").toLowerCase().trim();
     if (!domain) throw new GatewayError("Missing ?domain=", 400, "bad_request");
 
-    const { rows, stale } = await leaderboardRows();
+    const { rows, stale } = await leaderboardRows(kv);
     const row = rows.find((r) => (r.domain ?? "").toLowerCase() === domain);
     if (stale) c.header("X-Roam-Census", "stale");
     await record("/trust");
@@ -147,7 +147,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     const host = target.hostname.toLowerCase();
 
     // Seller identity: census match by domain (exact or subdomain).
-    const { rows, stale } = await leaderboardRows();
+    const { rows, stale } = await leaderboardRows(kv);
     const row = rows.find(
       (r) => (r.domain ?? "").toLowerCase() === host || host.endsWith(`.${(r.domain ?? "").toLowerCase()}`)
     );

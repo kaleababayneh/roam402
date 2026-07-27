@@ -47,4 +47,30 @@ describe("census cache", () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("down"));
     await expect(censusRows()).rejects.toThrow();
   });
+
+  // The 2026-07-26 agents-trust outage scenario: isolate recycled mid-outage.
+  it("cold isolate serves the KV snapshot when upstream is down", async () => {
+    const store = new Map<string, string>();
+    const kv = {
+      put: async (k: string, v: string) => void store.set(k, v),
+      get: async (k: string) => {
+        const v = store.get(k);
+        return v ? JSON.parse(v) : null;
+      },
+    } as unknown as KVNamespace;
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(ok([{ domain: "a.io" }]));
+    await censusRows(kv); // healthy fetch writes the snapshot
+    expect(store.has("census:snapshot")).toBe(true);
+
+    _resetCensusCache(); // isolate recycled
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("upstream down"));
+    const revived = await censusRows(kv);
+    expect(revived.stale).toBe(true);
+    expect(revived.rows[0]?.domain).toBe("a.io");
+
+    // …and without KV the same cold isolate would have thrown.
+    _resetCensusCache();
+    await expect(censusRows()).rejects.toThrow();
+  });
 });
