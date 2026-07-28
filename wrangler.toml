@@ -4,6 +4,12 @@ compatibility_date = "2026-07-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+# ── Landing assets (css/fonts/images/icons) ──────────────────────────────────
+# Served by Workers static assets BEFORE the Worker runs; anything without a
+# matching file (i.e. every API route and page) falls through to src/index.ts.
+[assets]
+directory = "./public"
+
 # Custom domain (provisioned automatically on `wrangler deploy` ONCE the
 # roam402.com zone exists in this Cloudflare account — RUNBOOK P1 step 0).
 routes = [

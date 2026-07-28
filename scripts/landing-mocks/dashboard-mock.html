@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#09090b; --panel:#0e0e12; --panel2:#101016; --line:rgba(255,255,255,.08);
+    --txt:#fafafa; --mut:#a1a1aa; --dim:#71717a; --sky:#38bdf8; --blue:#2563eb; --em:#34d399; --am:#fbbf24;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --sans:-apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  }
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .glow{position:absolute;pointer-events:none}
+  .top{display:flex;align-items:center;justify-content:space-between;height:76px;padding:0 40px;border-bottom:1px solid var(--line);position:relative;background:rgba(255,255,255,.012)}
+  .brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:650;letter-spacing:-.01em}
+  .brand img{width:30px;height:30px;border-radius:8px}
+  .brand .b{color:var(--sky)}
+  .tabs{display:flex;gap:34px;font-size:14.5px;color:var(--dim);position:absolute;left:50%;transform:translateX(-50%)}
+  .tabs .on{color:var(--txt);position:relative}
+  .tabs .on:after{content:"";position:absolute;left:0;right:0;bottom:-29px;height:2px;background:linear-gradient(90deg,var(--sky),var(--blue));border-radius:2px}
+  .right{display:flex;gap:12px;align-items:center}
+  .chip{font-family:var(--mono);font-size:12.5px;color:var(--mut);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:rgba(255,255,255,.02)}
+  .chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--em);margin-right:8px;vertical-align:1px}
+  .chip.acc{color:#cdeafe;border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.07)}
+  main{padding:34px 40px;display:flex;flex-direction:column;gap:26px;height:1004px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;position:relative;overflow:hidden}
+  .kpi:first-child{border-color:rgba(56,189,248,.3)}
+  .kpi:first-child:before{content:"";position:absolute;inset:0;background:radial-gradient(420px 140px at 0% 0%,rgba(56,189,248,.13),transparent 70%)}
+  .kpi .l{font-size:12.5px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase}
+  .kpi .v{font-family:var(--mono);font-size:34px;font-weight:500;margin-top:10px;letter-spacing:-.02em}
+  .kpi .v em{font-style:normal;color:var(--em)}
+  .kpi .s{font-size:12.5px;color:var(--mut);margin-top:8px}
+  .kpi .s.up{color:var(--em)}
+  .cols{display:grid;grid-template-columns:1fr 420px;gap:22px;flex:1;min-height:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .card h3{font-size:15px;font-weight:600;padding:18px 24px 14px;display:flex;align-items:center;justify-content:space-between}
+  .card h3 span{font-family:var(--mono);font-size:11.5px;color:var(--dim);font-weight:400}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);text-align:left;font-weight:500;padding:10px 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(255,255,255,.015)}
+  td{padding:13.5px 24px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .mono{font-family:var(--mono);font-size:12.5px}
+  .route{color:var(--txt)}
+  .dimc{color:var(--dim)}
+  .price{font-family:var(--mono);color:var(--em);font-size:12.5px}
+  .tx{font-family:var(--mono);font-size:12px;color:var(--sky)}
+  .tx.o{color:#a5b4fc}
+  .st{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px}
+  .st.ok{color:var(--em);background:rgba(52,211,153,.09);border:1px solid rgba(52,211,153,.28)}
+  .st.no{color:var(--am);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.26)}
+  .side{display:flex;flex-direction:column;gap:22px;min-height:0}
+  .bars{padding:6px 24px 22px;display:flex;flex-direction:column;gap:16px}
+  .bar .t{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}
+  .bar .t b{font-weight:500}
+  .bar .t span{font-family:var(--mono);color:var(--mut);font-size:12px}
+  .rail{height:9px;border-radius:6px;background:rgba(255,255,255,.05);overflow:hidden}
+  .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--sky),var(--blue))}
+  .health{padding:2px 24px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .hcell{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:var(--panel2)}
+  .hcell .n{font-family:var(--mono);font-size:24px}
+  .hcell .t{font-size:11.5px;color:var(--dim);margin-top:5px}
+  .hcell.up .n{color:var(--em)}
+  .hcell.deg .n{color:var(--am)}
+  .hcell.down .n{color:#f87171}
+  .foot{padding:0 24px 20px;font-size:12px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--em)}
+</style>
+</head>
+<body>
+  <div class="glow" style="top:-260px;left:38%;width:900px;height:420px;background:radial-gradient(closest-side,rgba(37,99,235,.16),transparent);"></div>
+  <header class="top">
+    <div class="brand">
+      <img src="file:///Users/kaleab/Documents/roam402/public/icons/roam402.svg" alt=""/>
+      <span>roam<span class="b">402</span></span><span style="font-size:12px;color:var(--dim);font-weight:400;letter-spacing:.06em">GATEWAY CONSOLE</span>
+    </div>
+    <nav class="tabs"><span class="on">Overview</span><span>Catalog</span><span>Receipts</span><span>Health</span><span>Treasury</span></nav>
+    <div class="right">
+      <span class="chip"><span class="dot"></span>algorand:mainnet</span>
+      <span class="chip acc">payTo 3CPT…DY3Q</span>
+    </div>
+  </header>
+  <main>
+    <section class="kpis">
+      <div class="kpi"><div class="l">Wrapped routes</div><div class="v">50</div><div class="s">across 23 verified services</div></div>
+      <div class="kpi"><div class="l">Settled · 30d</div><div class="v"><em>$1,284.55</em></div><div class="s up">▲ 18.4% vs prior window</div></div>
+      <div class="kpi"><div class="l">Calls fulfilled</div><div class="v">12,847</div><div class="s">zero paid-but-undelivered</div></div>
+      <div class="kpi"><div class="l">Median fulfil</div><div class="v">1.9s</div><div class="s">402 challenge in 6ms</div></div>
+    </section>
+    <section class="cols">
+      <div class="card">
+        <h3>Recent settlements <span>dual receipts · live</span></h3>
+        <table>
+          <thead><tr><th>Time</th><th>Route</th><th>Origin</th><th>Price</th><th>Algorand settle</th><th>Origin settle</th><th style="text-align:right">Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono dimc">18s</td><td class="mono route">/r/blockrun-chat</td><td class="dimc">Base</td><td class="price">$0.0001</td><td class="tx">5JLD…XZOA</td><td class="tx o">0xf9a9…2f75</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">1m</td><td class="mono route">/trust</td><td class="dimc">native</td><td class="price">$0.0005</td><td class="tx">K3M9…QW2A</td><td class="dimc mono">—</td><td style="text-align:right"><span class="st ok">settled ✓</span></td></tr>
+            <tr><td class="mono dimc">2m</td><td class="mono route">/r/quickintel-scan-full</td><td class="dimc">Base</td><td class="price">$0.0300</td><td class="tx">R7XP…M4NA</td><td class="tx o">0x81c4…09eb</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">4m</td><td class="mono route">/r/dexscreener-pairs</td><td class="dimc">Base</td><td class="price">$0.0020</td><td class="tx">W2FL…8SGQ</td><td class="tx o">0x3d77…c1a0</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">6m</td><td class="mono route">/precheck</td><td class="dimc">native</td><td class="price">$0.0002</td><td class="tx">T9QA…2HVA</td><td class="dimc mono">—</td><td style="text-align:right"><span class="st ok">settled ✓</span></td></tr>
+            <tr><td class="mono dimc">9m</td><td class="mono route">/r/heurist-mesh-agent</td><td class="dimc">Base</td><td class="price">$0.0050</td><td class="dimc mono">not charged</td><td class="dimc mono">origin 502</td><td style="text-align:right"><span class="st no">no charge</span></td></tr>
+            <tr><td class="mono dimc">11m</td><td class="mono route">/r/blockrun-market-data</td><td class="dimc">Base</td><td class="price">$0.0008</td><td class="tx">P4ZR…NC7Q</td><td class="tx o">0xb2ee…44d8</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">14m</td><td class="mono route">/r/blockrun-chat</td><td class="dimc">Base</td><td class="price">$0.0001</td><td class="tx">M8DU…5TLA</td><td class="tx o">0x60a1…7f02</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">17m</td><td class="mono route">/r/syraa-tts</td><td class="dimc">Base</td><td class="price">$0.0100</td><td class="tx">B6KN…JJXA</td><td class="tx o">0x9cd0…e513</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">21m</td><td class="mono route">/r/blockrun-chat</td><td class="dimc">Base</td><td class="price">$0.0001</td><td class="tx">G2VW…8PDA</td><td class="tx o">0x14fb…a980</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">24m</td><td class="mono route">/discover</td><td class="dimc">native</td><td class="price">$0.0001</td><td class="tx">Y8HC…R2LA</td><td class="dimc mono">—</td><td style="text-align:right"><span class="st ok">settled ✓</span></td></tr>
+            <tr><td class="mono dimc">28m</td><td class="mono route">/r/quickintel-scan-full</td><td class="dimc">Base</td><td class="price">$0.0300</td><td class="tx">D5MQ…W6QA</td><td class="tx o">0x77e3…5b1c</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">31m</td><td class="mono route">/r/dexscreener-tokens</td><td class="dimc">Base</td><td class="price">$0.0020</td><td class="tx">N1XB…K9VA</td><td class="tx o">0xc2d8…7aa4</td><td style="text-align:right"><span class="st ok">settled ✓✓</span></td></tr>
+            <tr><td class="mono dimc">36m</td><td class="mono route">/trust</td><td class="dimc">native</td><td class="price">$0.0005</td><td class="tx">Q7RF…3JNA</td><td class="dimc mono">—</td><td style="text-align:right"><span class="st ok">settled ✓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="side">
+        <div class="card">
+          <h3>Trust mix <span>Agents-Trust census</span></h3>
+          <div class="bars">
+            <div class="bar"><div class="t"><b style="color:var(--em)">Corroborated</b><span>12 routes</span></div><div class="rail"><div class="fill" style="width:24%"></div></div></div>
+            <div class="bar"><div class="t"><b style="color:var(--sky)">Established</b><span>26 routes</span></div><div class="rail"><div class="fill" style="width:52%"></div></div></div>
+            <div class="bar"><div class="t"><b style="color:var(--am)">Emerging</b><span>12 routes</span></div><div class="rail"><div class="fill" style="width:24%;opacity:.6"></div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Top routes · 24h <span>by calls</span></h3>
+          <div class="bars">
+            <div class="bar"><div class="t"><b class="mono">/r/blockrun-chat</b><span>8,412</span></div><div class="rail"><div class="fill" style="width:88%"></div></div></div>
+            <div class="bar"><div class="t"><b class="mono">/r/quickintel-scan-full</b><span>1,904</span></div><div class="rail"><div class="fill" style="width:34%;opacity:.8"></div></div></div>
+            <div class="bar"><div class="t"><b class="mono">/trust</b><span>1,286</span></div><div class="rail"><div class="fill" style="width:22%;opacity:.6"></div></div></div>
+          </div>
+        </div>
+        <div class="card" style="flex:1">
+          <h3>Origin health <span>unpaid 402 probes</span></h3>
+          <div class="health">
+            <div class="hcell up"><div class="n">48</div><div class="t">up</div></div>
+            <div class="hcell deg"><div class="n">1</div><div class="t">degraded</div></div>
+            <div class="hcell down"><div class="n">1</div><div class="t">refused</div></div>
+          </div>
+          <div class="foot"><span class="pulse"></span>last sweep 12m ago · down routes refuse before payment</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

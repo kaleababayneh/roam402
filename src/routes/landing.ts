@@ -1,11 +1,15 @@
 /**
  * src/routes/landing.ts — the merchant's public face, served by the worker.
  *
- * The Bazaar enriches merchant pages from domain metadata, so this page is
- * scoring surface, not vanity. Styling mirrors the Agents-Trust design
- * system exactly (Validatier-flavoured light theme): Darker Grotesque
- * display / DM Sans body / DM Mono numbers, lavender-white canvas #f4f5fb,
- * white cards, indigo #4f46e5 interactive, emerald #059669 money ink.
+ * Dark, animated landing in the cronpay template language (compiled Tailwind
+ * sheet served from /css/landing.css, template fonts from /fonts/*), fully
+ * rebranded for Roam402. The Bazaar enriches merchant pages from domain
+ * metadata, so meta tags and copy are scoring surface, not vanity.
+ *
+ * Static assets (css/fonts/images/icons) live in /public and are served by
+ * Workers static assets (wrangler [assets]); every dynamic value on the page
+ * (route count, catalog rows, native prices, network) renders from the same
+ * catalog the 402s use.
  *
  * Also serves the agentic discovery files (/llms.txt,
  * /.well-known/agents.json) the challenge checklist rewards.
@@ -18,173 +22,548 @@ import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
 
-const TIER_INK: Record<string, string> = {
-  Corroborated: "#059669",
-  Established: "#4f46e5",
-  Emerging: "#b45309",
+/* ── inline SVG marks (simple-icons paths; Base mark from base.org brand) ── */
+
+const MARK_ALGORAND = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M13.874 0h3.673l1.61 5.963h3.789l-2.588 4.5 3.624 13.533h-3.757l-2.44-9.077-5.247 9.079H8.345l8.107-14.051-1.304-4.878L4.215 24H.018Z"/></svg>`;
+
+const MARK_SOLANA = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m23.8764 18.0313-3.962 4.1393a.9201.9201 0 0 1-.306.2106.9407.9407 0 0 1-.367.0742H.4599a.4689.4689 0 0 1-.2522-.0733.4513.4513 0 0 1-.1696-.1962.4375.4375 0 0 1-.0314-.2545.4438.4438 0 0 1 .117-.2298l3.9649-4.1393a.92.92 0 0 1 .3052-.2102.9407.9407 0 0 1 .3658-.0746H23.54a.4692.4692 0 0 1 .2523.0734.4531.4531 0 0 1 .1697.196.438.438 0 0 1 .0313.2547.4442.4442 0 0 1-.1169.2297zm-3.962-8.3355a.9202.9202 0 0 0-.306-.2106.941.941 0 0 0-.367-.0742H.4599a.4687.4687 0 0 0-.2522.0734.4513.4513 0 0 0-.1696.1961.4376.4376 0 0 0-.0314.2546.444.444 0 0 0 .117.2297l3.9649 4.1394a.9204.9204 0 0 0 .3052.2102c.1154.049.24.0744.3658.0746H23.54a.469.469 0 0 0 .2523-.0734.453.453 0 0 0 .1697-.1961.4382.4382 0 0 0 .0313-.2546.4444.4444 0 0 0-.1169-.2297zM.46 6.7225h18.7815a.9411.9411 0 0 0 .367-.0742.9202.9202 0 0 0 .306-.2106l3.962-4.1394a.4442.4442 0 0 0 .117-.2297.4378.4378 0 0 0-.0314-.2546.453.453 0 0 0-.1697-.196.469.469 0 0 0-.2523-.0734H4.7596a.941.941 0 0 0-.3658.0745.9203.9203 0 0 0-.3052.2102L.1246 5.9687a.4438.4438 0 0 0-.1169.2295.4375.4375 0 0 0 .0312.2544.4512.4512 0 0 0 .1692.196.4689.4689 0 0 0 .2518.0739z"/></svg>`;
+
+const MARK_ETHEREUM = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11.944 17.97 4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0 4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>`;
+
+const MARK_BASE = `<svg viewBox="0 0 111 111" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z"/></svg>`;
+
+const ICON_USDC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><path d="M16 8.6h-5.2a2.1 2.1 0 1 0 0 4.2h2.4a2.1 2.1 0 1 1 0 4.2H8"/><path d="M12 5.6v2.2m0 8.4v2.2"/></svg>`;
+
+const ARROW_RIGHT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 group-hover:translate-x-1 transition-all duration-300"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
+
+/* buttons share the template's compiled utility recipe */
+const BTN = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium hover:-translate-y-0.5 transition-all duration-300`;
+
+const TIER_CLASS: Record<string, string> = {
+  Corroborated: "rx-tier-corroborated",
+  Established: "rx-tier-established",
+  Emerging: "rx-tier-emerging",
 };
 
 function tierChip(tier: string): string {
-  const ink = TIER_INK[tier] ?? "#71768d";
-  return `<span class="chip" style="color:${ink}">${tier}</span>`;
+  const cls = TIER_CLASS[tier] ?? "rx-tier-listed";
+  return `<span class="text-sm font-semibold ${cls}">${tier}</span>`;
 }
 
-function catalogRows(): string {
+function catalogPreviewRows(): string {
   return catalog.routes
-    .slice(0, 10)
+    .slice(0, 6)
     .map(
-      (r) => `<tr>
-        <td><span class="method ${r.method === "POST" ? "post" : "get"}">${r.method}</span></td>
-        <td class="mono path">/r/${r.slug}</td>
-        <td class="mono svc">${r.service}</td>
-        <td>${tierChip(r.tier)}</td>
-        <td class="mono price">${usdString(r.roamPriceUsd)}</td>
-      </tr>`
+      (r) => `<div class="grid rx-t-grid text-sm py-2 border-t border-border/50 items-center">
+            <div class="rx-mono rx-trunc" style="font-size:12.5px">/r/${r.slug}</div>
+            <div class="rx-trunc text-muted-foreground" style="font-size:12.5px">${r.service}</div>
+            <div>${tierChip(r.tier)}</div>
+            <div class="rx-mono rx-price" style="font-size:12.5px">${usdString(r.roamPriceUsd)}</div>
+          </div>`
     )
-    .join("\n");
+    .join("\n          ");
+}
+
+function nativeRows(): string {
+  return NATIVE_ROUTES.map((r) => {
+    const name = r.path.slice(1).replace(/^./, (c) => c.toUpperCase());
+    return `<div class="grid rx-t-grid text-sm py-2 border-t border-border/50 items-center">
+            <div>${name}</div>
+            <div class="rx-mono rx-trunc" style="font-size:12.5px">${r.path}</div>
+            <div class="rx-mono rx-price" style="font-size:12.5px">${usdString(r.priceUsd)}</div>
+            <div class="text-sm font-semibold text-green-500">live</div>
+          </div>`;
+  }).join("\n          ");
+}
+
+/* orbiting hero decoration: chains roaming around the Algorand-anchored gateway */
+function orbitRings(): string {
+  const dot = (cls: string) =>
+    `<svg class="${cls}" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor"/></svg>`;
+  const orb = (radius: number, duration: number, angle: number, inner: string) =>
+    `<div style="--duration:${duration};--radius:${radius};--angle:${angle};--icon-size:34px" class="absolute flex size-[var(--icon-size)] transform-gpu animate-orbit items-center justify-center rounded-full">${inner}</div>`;
+  const ring = (r: number) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="pointer-events-none absolute inset-0 size-full"><circle class="stroke-white/10 stroke-1 currentColor" stroke-dasharray="5 5" cx="50%" cy="50%" r="${r}" fill="none"/></svg>`;
+  const mark = (svg: string, size: string, tone: string) =>
+    `<span class="${size} ${tone}" aria-hidden="true">${svg}</span>`;
+
+  return `${ring(300)}
+        ${orb(300, 40, 0, mark(MARK_ALGORAND, "size-5", "text-foreground/80"))}
+        ${orb(300, 40, 180, mark(ICON_USDC, "size-5", "text-foreground/60"))}
+        ${ring(400)}
+        ${orb(400, 80, 0, mark(MARK_BASE, "size-4", "text-foreground/70"))}
+        ${orb(400, 80, 120, mark(MARK_SOLANA, "size-4", "text-foreground/70"))}
+        ${orb(400, 80, 240, dot("size-1 text-foreground/50"))}
+        ${ring(500)}
+        ${orb(500, 200, 0, dot("size-1 text-foreground/50"))}
+        ${orb(500, 200, 90, mark(MARK_ETHEREUM, "size-5", "text-foreground/60"))}
+        ${orb(500, 200, 180, dot("size-1 text-foreground/90"))}
+        ${orb(500, 200, 270, dot("size-1 text-foreground/50"))}`;
+}
+
+/* feature bento card in the template's chrome (hover ring + inset panel) */
+function featureCard(opts: { span?: string; icon: string; title: string; copy: string; img: string; alt: string }): string {
+  return `<div class="w-full h-full relative flex flex-col rounded-2xl lg:rounded-3xl bg-card border border-border/50 hover:border-border/100 transition-colors ${opts.span ?? ""} reveal">
+        <div class="group relative flex size-full rounded-xl p-4 lg:p-6 lg:rounded-3xl">
+          <div class="absolute inset-px z-10 rounded-xl rx-inner"></div>
+          <div class="relative z-30 w-full">
+            <div class="flex items-center space-x-4 mb-4">
+              <h3 class="text-xl font-semibold flex items-center gap-2">${opts.icon}${opts.title}</h3>
+            </div>
+            <p class="text-sm text-muted-foreground">${opts.copy}</p>
+            <div class="mt-6 w-full bg-card/50 overflow-hidden rounded-lg">
+              <img alt="${opts.alt}" loading="lazy" decoding="async" class="w-full h-full object-cover" src="${opts.img}"/>
+            </div>
+          </div>
+        </div>
+      </div>`;
+}
+
+const LUCIDE = {
+  roam: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 rx-accent"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>`,
+  receipt: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 rx-accent"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>`,
+  shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 rx-accent"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`,
+  chart: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 rx-accent"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>`,
+  wallet: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 rx-accent"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>`,
+  menu: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+  filter: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`,
+  download: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
+  trend: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
+};
+
+/* integration bubble (circle chrome from the template's platform section) */
+function bubble(mark: string, size: string, inner: string, title: string, extra = ""): string {
+  return `<div class="absolute z-20 p-3 rounded-full flex items-center justify-center bg-gradient-to-b from-foreground/5 to-transparent shadow-xl shadow-black/10 backdrop-blur-lg transition-all duration-300 hover:scale-110 group ${extra} ${size}" title="${title}"><span class="${inner} text-foreground" aria-hidden="true">${mark}</span></div>`;
 }
 
 function page(cfg: Config): string {
   const n = catalog.routes.length;
   const services = new Set(catalog.routes.map((r) => r.service)).size;
+  const base = cfg.publicBaseUrl || "";
+  const title = "Roam402 | Every x402 service, payable on Algorand";
+  const desc = `Roam402 is the x402 roaming gateway for AI agents: ${n} verified services from the $45M+ x402 economy, payable in USDC on Algorand via the GoPlausible facilitator, fulfilled cross-chain with dual receipts. By Agents-Trust.`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Roam402 | Every x402 service, payable on Algorand</title>
-<meta name="description" content="The x402 roaming gateway: ${n} verified services from the $45M+ x402 economy, payable in USDC on Algorand via the GoPlausible facilitator, fulfilled cross-chain with dual receipts. By Agents-Trust."/>
-<meta property="og:title" content="Roam402 | Every x402 service, payable on Algorand"/>
-<meta property="og:description" content="${n} trust-tiered services · one Algorand merchant · dual-chain receipts. By Agents-Trust."/>
+<title>${title}</title>
+<meta name="description" content="${desc}"/>
+<meta name="keywords" content="x402,Algorand,AI agents,agent payments,USDC,x402 gateway,x402 catalog,dual-chain receipts,machine payments,GoPlausible,Agents-Trust,MCP"/>
+<meta name="author" content="Roam402"/>
+<meta name="creator" content="Agents-Trust"/>
+<meta name="robots" content="index, follow"/>
+<meta name="format-detection" content="telephone=no, address=no, email=no"/>
 <meta name="theme-color" content="#f4f5fb"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Darker+Grotesque:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<style>
-  :root{
-    --canvas:#f4f5fb; --card:#ffffff; --ink:#0d0e15; --head:#181a26;
-    --body:#3b3f52; --muted:#71768d; --faint:#969bb0; --line:#e2e5ee;
-    --indigo:#4f46e5; --indigo-bg:#edefff; --indigo-line:#cfd2fc;
-    --money:#059669; --money-bg:#ecfdf3; --money-line:#c3f0dc;
-    --display:'Darker Grotesque',ui-sans-serif,sans-serif;
-    --sans:'DM Sans',ui-sans-serif,system-ui,sans-serif;
-    --mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  *{box-sizing:border-box;margin:0}
-  body{background:var(--canvas);color:var(--body);font-family:var(--sans);-webkit-font-smoothing:antialiased}
-  a{color:var(--indigo);text-decoration:none}
-  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
-  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
-  .wordmark{font-family:var(--display);font-weight:800;font-size:26px;color:var(--ink);letter-spacing:-.01em}
-  .wordmark .four{color:var(--indigo)}
-  .byline{font-size:12px;color:var(--muted)}
-  .byline a{font-weight:600}
-  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-  .hero{padding:56px 0 40px}
-  h1{font-family:var(--display);font-size:clamp(40px,7vw,64px);line-height:1.02;font-weight:800;color:var(--head);margin:10px 0 16px;letter-spacing:-.01em}
-  h1 em{font-style:normal;color:var(--indigo)}
-  .sub{font-size:16px;line-height:1.6;max-width:640px}
-  .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;box-shadow:0 1px 2px rgba(13,14,21,.04)}
-  .stat b{display:block;font-family:var(--mono);font-size:20px;color:var(--ink);font-weight:500}
-  .stat span{font-size:11px;color:var(--muted)}
-  .stat b.money{color:var(--money)}
-  section{padding:28px 0}
-  .h-section{font-family:var(--display);font-size:24px;line-height:1.05;font-weight:700;color:var(--head);margin-bottom:14px}
-  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-  .step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(13,14,21,.04)}
-  .step .k{font-family:var(--mono);font-size:11px;color:var(--indigo);font-weight:500}
-  .step h3{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--head);margin:6px 0 6px}
-  .step p{font-size:13px;line-height:1.55;color:var(--muted)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(13,14,21,.04);overflow:hidden}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
-  td{padding:10px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
-  tr:last-child td{border-bottom:none}
-  .mono{font-family:var(--mono)}
-  .path{color:var(--ink)}
-  .svc{color:var(--muted);font-size:12px}
-  .price{color:var(--money);text-align:right}
-  th:last-child{text-align:right}
-  .method{font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 7px;border-radius:6px;border:1px solid}
-  .method.get{color:var(--money);background:var(--money-bg);border-color:var(--money-line)}
-  .method.post{color:var(--indigo);background:var(--indigo-bg);border-color:var(--indigo-line)}
-  .chip{font-size:11px;font-weight:600}
-  .foot-note{padding:14px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
-  .foot-note code{font-family:var(--mono);color:var(--indigo)}
-  .native{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
-  footer{padding:36px 0 48px;font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between}
-  .tag{font-family:var(--mono);font-size:11px;color:var(--muted)}
-</style>
+<meta property="og:title" content="${title}"/>
+<meta property="og:description" content="${n} trust-tiered services · one Algorand merchant · dual-chain receipts. By Agents-Trust."/>
+<meta property="og:site_name" content="Roam402"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:type" content="website"/>
+${base ? `<meta property="og:url" content="${base}/"/>` : ""}
+<meta property="og:image" content="${base}/icons/banner.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="Roam402, the x402 roaming gateway on Algorand"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="${title}"/>
+<meta name="twitter:description" content="The roaming gateway for AI agents: pay USDC on Algorand, call verified x402 services on Base, Solana, and Ethereum, get receipts from both chains."/>
+<meta name="twitter:image" content="${base}/icons/banner.png"/>
+${base ? `<link rel="canonical" href="${base}/"/>` : ""}
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+<link rel="icon" href="/favicon.ico" sizes="32x32"/>
+<link rel="apple-touch-icon" href="/icons/icon.png"/>
+<link rel="preload" href="/fonts/12084922609e6532-s.p.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="preload" href="/fonts/22539d17f3707926-s.p.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="preload" href="/fonts/e4af272ccee01ff0-s.p.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="preload" href="/fonts/e6099e249fd938cc-s.p.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="stylesheet" href="/css/landing.css"/>
+<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
 </head>
-<body>
-<div class="wrap">
-  <nav>
-    <div class="wordmark">roam<span class="four">402</span></div>
-    <div class="byline">by <a href="https://agents-trust.com">Agents-Trust</a></div>
-  </nav>
+<body class="min-h-screen bg-background text-foreground antialiased font-heading overflow-x-hidden __variable_f367f3 __variable_b44e54 __variable_315a98">
 
-  <div class="hero">
-    <div class="eyebrow">x402 roaming gateway · Algorand ${cfg.network}</div>
-    <h1>Every verified x402 service.<br/><em>One merchant on Algorand.</em></h1>
-    <p class="sub">Agents on Algorand get the entire x402 economy: pay-per-call inference,
-    token safety scans, market data, and tools, all through one gateway. Pay USDC on Algorand,
-    settled by the GoPlausible facilitator; Roam402 fulfils the call on the service's home
-    chain from its own treasury and returns the response with receipts from both chains.</p>
-    <div class="stats">
-      <div class="stat"><b>${n}</b><span>wrapped routes</span></div>
-      <div class="stat"><b>${services}</b><span>verified services</span></div>
-      <div class="stat"><b class="money">$45M+</b><span>settlement indexed by Agents-Trust</span></div>
-      <div class="stat"><b>2</b><span>chains per receipt</span></div>
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header class="sticky top-0 w-full h-16 bg-background/80 backdrop-blur-sm z-50">
+  <div class="w-full mx-auto lg:max-w-screen-xl lg:mx-auto px-4 md:px-12 h-full">
+    <div class="flex items-center justify-between h-full">
+      <div class="flex items-center">
+        <a class="flex items-center gap-2" href="/">
+          <img src="/icons/roam402.svg" alt="Roam402" width="26" height="26"/>
+          <span class="text-xl font-semibold">roam<span class="rx-accent">402</span></span>
+        </a>
+      </div>
+      <div class="hidden lg:flex items-center gap-4">
+        <ul class="flex items-center gap-8">
+          <li class="text-sm font-medium link"><a href="/#how">How it works</a></li>
+          <li class="text-sm font-medium link"><a href="/catalog">Catalog</a></li>
+          <li class="text-sm font-medium link"><a href="/receipts">Receipts</a></li>
+          <li class="text-sm font-medium link"><a href="/llms.txt">Agent spec</a></li>
+        </ul>
+      </div>
+      <div class="flex items-center gap-4">
+        <a class="hidden lg:block" href="/playground">
+          <button class="${BTN} border border-input bg-blue-500 text-white hover:bg-blue-600 h-9 px-4 py-2">Open playground</button>
+        </a>
+        <button id="menu-btn" aria-label="Menu" aria-expanded="false" class="${BTN} hover:bg-white/10 hover:text-accent-foreground h-8 w-8 lg:hidden" type="button">${LUCIDE.menu}</button>
+      </div>
     </div>
   </div>
-
-  <section>
-    <div class="h-section">How it works</div>
-    <div class="steps">
-      <div class="step"><div class="k">01 · HTTP 402</div><h3>Call any route</h3>
-        <p>GET or POST a route below with no payment. The gateway answers with an x402
-        challenge: price in USDC, our Algorand address, the facilitator's fee-payer.</p></div>
-      <div class="step"><div class="k">02 · PAY ON ALGORAND</div><h3>Settle in USDC</h3>
-        <p>Your client signs the payment; GoPlausible verifies and settles it on Algorand.
-        One merchant address for everything, so spend tracking stays trivial.</p></div>
-      <div class="step"><div class="k">03 · DUAL RECEIPTS</div><h3>Fulfilled cross-chain</h3>
-        <p>We pay the origin service on its home chain from our treasury and stream the
-        response back with both settlement receipts. Origin fails → you are never charged.</p></div>
-    </div>
-  </section>
-
-  <section>
-    <div class="h-section">Catalog preview</div>
-    <div class="card">
-      <table>
-        <thead><tr><th></th><th>Route</th><th>Origin service</th><th>Trust tier</th><th>Price</th></tr></thead>
-        <tbody>
-${catalogRows()}
-        </tbody>
-      </table>
-      <div class="foot-note">Full machine-readable catalog (free): <code>GET /catalog</code> ·
-      trust tiers from the <a href="https://agents-trust.com">Agents-Trust census</a> ·
-      only liveness-probed, trust-tiered services are wrapped.</div>
-    </div>
-  </section>
-
-  <section>
-    <div class="h-section">Native trust endpoints</div>
-    <div class="native">
-      ${NATIVE_ROUTES.map(
-        (r) => `<div class="step"><div class="k">${usdString(r.priceUsd)} · GET ${r.path}</div>
-        <p style="margin-top:8px">${r.description}</p></div>`
-      ).join("\n")}
-    </div>
-  </section>
-
-  <footer>
-    <div>© 2026 Roam402 · by <a href="https://agents-trust.com">Agents-Trust</a> ·
-    settles via <a href="https://facilitator.goplausible.xyz">GoPlausible</a></div>
-    <div class="tag">#x402-global-challenge</div>
-  </footer>
+</header>
+<div id="m-menu" class="rx-menu lg:hidden">
+  <a href="/#how">How it works</a>
+  <a href="/catalog">Catalog</a>
+  <a href="/playground">Playground</a>
+  <a href="/receipts">Receipts</a>
+  <a href="/llms.txt">Agent spec</a>
 </div>
+
+<main class="mx-auto w-full z-40 relative">
+  <div class="w-full mx-auto lg:max-w-screen-xl lg:mx-auto px-4 md:px-12 py-20 relative">
+
+    <!-- ── Hero ───────────────────────────────────────────────────────── -->
+    <div class="relative flex flex-col items-center justify-center w-full py-20">
+      <div class="absolute flex lg:hidden size-40 rounded-full bg-blue-500 blur-[10rem] top-0 left-1/2 -translate-x-1/2 -z-10"></div>
+      <div class="flex flex-col items-center justify-center gap-y-8 relative">
+        <div class="h-full hidden lg:flex absolute inset-0 top-0 mb-auto flex-col items-center justify-center w-full min-h-screen -z-10">
+        ${orbitRings()}
+        </div>
+
+        <div class="flex flex-col items-center justify-center text-center gap-y-4 bg-background/0">
+          <div class="w-full h-full relative overflow-hidden reveal">
+            <span class="rx-pill mx-auto">
+              <span class="rx-pill-inner">
+                <span class="px-2 py-[0.5px] h-[18px] tracking-wide flex items-center justify-center rounded-full bg-gradient-to-r from-sky-400 to-blue-600 text-[9px] font-medium text-white">NEW</span>
+                x402 roaming gateway · Algorand ${cfg.network}
+              </span>
+            </span>
+          </div>
+
+          <div class="w-full h-full reveal" style="--rd:.08s">
+            <h1 class="text-4xl md:text-5xl lg:text-7xl font-bold text-center !leading-tight max-w-4xl mx-auto">Every x402 service,<br/><span class="rx-grad">payable on Algorand.</span></h1>
+          </div>
+
+          <div class="w-full h-full reveal" style="--rd:.16s">
+            <p class="max-w-xl mx-auto mt-2 text-base lg:text-lg text-center text-muted-foreground">Roam402 is the roaming gateway for AI agents. Pay USDC on Algorand, call verified services that live on Base, Solana, and Ethereum, and get a cryptographic receipt from both chains with every response.</p>
+          </div>
+
+          <div class="w-full h-full z-20 reveal" style="--rd:.24s">
+            <div class="flex items-center justify-center mt-6 gap-x-4">
+              <a class="flex items-center gap-2 group" href="/catalog">
+                <button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Explore catalog${ARROW_RIGHT}</button>
+              </a>
+              <a class="flex items-center gap-2 group" href="/playground">
+                <button class="${BTN} border border-input hover:bg-white/10 hover:text-accent-foreground h-10 px-8">Try playground</button>
+              </a>
+            </div>
+          </div>
+
+          <!-- live census preview (real data, not a mock) -->
+          <div class="w-full h-full relative reveal" style="--rd:.3s">
+            <a href="https://agents-trust.com" aria-label="Open the Agents-Trust census">
+              <div class="relative rounded-xl lg:rounded-[32px] border border-border p-2 backdrop-blur-lg mt-10 max-w-6xl mx-auto">
+                <div class="absolute top-1/8 left-1/2 -z-10 bg-gradient-to-r from-sky-500 to-blue-600 w-1/2 lg:w-3/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[4rem] lg:blur-[10rem] animate-image-glow"></div>
+                <div class="hidden lg:block absolute -top-1/8 left-1/2 -z-20 bg-blue-600 w-1/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[10rem] animate-image-glow"></div>
+                <div class="rounded-lg lg:rounded-[22px] border border-border rx-inner">
+                  <img alt="The live Agents-Trust census of x402 settlement that powers the Roam402 catalog" loading="lazy" width="1920" height="1080" decoding="async" class="rounded-lg lg:rounded-[20px]" style="color:transparent" src="/images/dashboard.png"/>
+                </div>
+              </div>
+              <div class="bg-gradient-to-t from-background to-transparent absolute bottom-0 inset-x-0 w-full h-1/2"></div>
+            </a>
+            <p class="text-sm text-muted-foreground mt-4 text-center relative z-20">Live data: the <a class="rx-accent" href="https://agents-trust.com">Agents-Trust census</a> this catalog is built from</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Stats strip ────────────────────────────────────────────────── -->
+    <div class="relative flex flex-col items-center justify-center w-full py-20 mt-16 companies overflow-hidden">
+      <div class="w-full h-full reveal">
+        <div class="flex flex-col items-center justify-center">
+          <h4 class="text-2xl lg:text-4xl font-medium text-center">Built on the Agents-Trust census.<br class="lg:hidden"/> Settled by GoPlausible.</h4>
+        </div>
+      </div>
+      <div class="w-full h-full reveal" style="--rd:.1s">
+        <div class="rx-stats">
+          <div class="rx-stat"><b>${n}</b><span>wrapped routes</span></div>
+          <div class="rx-stat"><b>${services}</b><span>verified services</span></div>
+          <div class="rx-stat"><b class="rx-money">$45M+</b><span>settlement indexed</span></div>
+          <div class="rx-stat"><b>2</b><span>chains per receipt</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Features ───────────────────────────────────────────────────── -->
+    <div class="relative flex flex-col items-center justify-center w-full py-20">
+      <div class="w-full h-full reveal">
+        <div class="flex flex-col items-center text-center max-w-2xl mx-auto">
+          <h2 class="text-2xl md:text-4xl lg:text-5xl font-heading font-medium !leading-snug mt-6">x402 roaming <br/> made <span class="font-subheading italic">simple</span></h2>
+          <p class="text-base md:text-lg text-center text-accent-foreground/80 mt-6">${n} wrapped routes, three native trust endpoints, one merchant address. The whole x402 economy through a single Algorand rail.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 relative overflow-visible">
+        ${featureCard({
+          icon: LUCIDE.roam,
+          title: "Multi-chain roaming",
+          copy: "Agents pay USDC on Algorand. Roam402 fulfils the call on Base, Solana, or Ethereum from its own treasury and streams the response back.",
+          img: "/images/feature-roaming.svg",
+          alt: "Payment routed from Algorand through Roam402 to Base, Solana, and Ethereum",
+        })}
+        ${featureCard({
+          icon: LUCIDE.receipt,
+          title: "Dual-chain receipts",
+          copy: "Every response carries settlement proof from Algorand and the origin chain, signed as an EdDSA JWS you can verify offline.",
+          img: "/images/feature-receipts.svg",
+          alt: "Two settlement receipts, one from Algorand and one from Base",
+        })}
+        ${featureCard({
+          span: "md:col-span-2 lg:col-span-1",
+          icon: LUCIDE.shield,
+          title: "Precheck and trust",
+          copy: "Vet any x402 endpoint before funds move. /precheck returns seller identity, trust tier, and the last liveness probe verdict.",
+          img: "/images/feature-precheck.svg",
+          alt: "Terminal running a precheck with a safe-to-pay verdict",
+        })}
+        ${featureCard({
+          span: "lg:col-span-2",
+          icon: LUCIDE.chart,
+          title: "Agents-Trust census",
+          copy: "Catalog selection is not a directory scrape. Tiers, prices, and liveness come from the Agents-Trust census indexing $45M+ of real on-chain x402 settlement.",
+          img: "/images/feature-census.svg",
+          alt: "Trust-tiered seller leaderboard from the Agents-Trust census",
+        })}
+        ${featureCard({
+          icon: LUCIDE.wallet,
+          title: "Single merchant payTo",
+          copy: `All ${n} routes settle to one Algorand address. Treasury tracking, audit logs, and spend caps stay trivial for your agent.`,
+          img: "/images/feature-payto.svg",
+          alt: "Many gateway routes funneling into a single Algorand merchant address",
+        })}
+      </div>
+    </div>
+
+    <!-- ── How it works ───────────────────────────────────────────────── -->
+    <div id="how" class="relative flex flex-col items-center justify-center w-full py-20">
+      <div class="w-full h-full reveal">
+        <div class="flex flex-col items-center text-center max-w-2xl mx-auto mb-12">
+          <h2 class="text-2xl md:text-4xl lg:text-5xl font-heading font-medium !leading-snug">How roaming <span class="font-subheading italic">works</span></h2>
+          <p class="text-base md:text-lg text-accent-foreground/80 mt-4">Standard x402, no SDK required. Any client that speaks HTTP 402 can pay.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-6xl mx-auto">
+        <div class="rounded-2xl lg:rounded-3xl bg-card border border-border/50 hover:border-border/100 transition-colors p-6 reveal">
+          <div class="rx-mono rx-accent" style="font-size:11px;letter-spacing:.08em">01 · HTTP 402</div>
+          <h3 class="text-xl font-semibold mt-2">Call any route</h3>
+          <p class="text-sm text-muted-foreground mt-2">GET or POST a route with no payment. The gateway answers with an x402 challenge: the USDC price, our Algorand address, and the facilitator fee payer.</p>
+        </div>
+        <div class="rounded-2xl lg:rounded-3xl bg-card border border-border/50 hover:border-border/100 transition-colors p-6 reveal" style="--rd:.08s">
+          <div class="rx-mono rx-accent" style="font-size:11px;letter-spacing:.08em">02 · PAY ON ALGORAND</div>
+          <h3 class="text-xl font-semibold mt-2">Settle in USDC</h3>
+          <p class="text-sm text-muted-foreground mt-2">Your client signs the payment and GoPlausible verifies and settles it on Algorand. One merchant address for everything keeps spend tracking trivial.</p>
+        </div>
+        <div class="rounded-2xl lg:rounded-3xl bg-card border border-border/50 hover:border-border/100 transition-colors p-6 reveal" style="--rd:.16s">
+          <div class="rx-mono rx-accent" style="font-size:11px;letter-spacing:.08em">03 · DUAL RECEIPTS</div>
+          <h3 class="text-xl font-semibold mt-2">Fulfilled cross-chain</h3>
+          <p class="text-sm text-muted-foreground mt-2">Roam402 pays the origin service on its home chain and returns the response with receipts from both chains. If the origin fails, you are never charged.</p>
+        </div>
+      </div>
+      <div class="w-full max-w-6xl mx-auto mt-6 reveal" style="--rd:.2s">
+        <div class="rx-code" aria-label="Example x402 flow"><span class="c">$</span> curl ${base || "https://roam402.com"}/trust?domain=blockrun.ai
+<span class="b">HTTP/1.1 402 Payment Required</span>            <span class="c"># x402 challenge: price, payTo, feePayer</span>
+<span class="c">$</span> curl ${base || "https://roam402.com"}/trust?domain=blockrun.ai <span class="c">-H</span> "X-PAYMENT: &lt;signed&gt;"
+<span class="g">HTTP/1.1 200 OK</span>                          <span class="c"># body + Algorand receipt + origin receipt</span></div>
+      </div>
+    </div>
+
+    <!-- ── Live catalog ───────────────────────────────────────────────── -->
+    <div class="relative flex flex-col items-center justify-center w-full py-20">
+      <div class="w-full h-full reveal">
+        <div class="flex flex-col items-center text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-2xl md:text-4xl lg:text-5xl font-heading font-medium !leading-snug">A catalog that is <br/><span class="font-subheading italic">alive</span></h2>
+          <p class="text-base md:text-lg text-accent-foreground/80 mt-4">These rows render from the same worker that serves the 402s. The machine-readable catalog is free at /catalog, and down routes refuse before payment.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative w-full">
+        <div class="w-full h-full reveal">
+          <div class="rounded-2xl bg-background/40 relative border border-border/50">
+            <div class="group relative flex size-full rounded-xl p-4 lg:p-8 w-full overflow-hidden">
+              <div class="absolute inset-px z-10 rounded-xl rx-inner"></div>
+              <div class="relative z-30 w-full">
+                <div class="absolute bottom-0 right-0 bg-blue-500 w-1/4 h-1/4 blur-[8rem] z-20"></div>
+                <div class="space-y-4">
+                  <h3 class="text-xl font-semibold">Wrapped catalog routes</h3>
+                  <p class="text-sm text-muted-foreground">Verified x402 services, callable in USDC on Algorand today.</p>
+                  <div class="space-y-4">
+                    <div class="flex justify-between items-baseline">
+                      <div>
+                        <div class="text-3xl font-semibold rx-mono">${n} routes</div>
+                        <div class="text-sm text-green-500 flex items-center gap-1 mt-2">${LUCIDE.trend}${services} services · liveness probed</div>
+                      </div>
+                      <div class="flex gap-2">
+                        <button aria-label="Filter" class="${BTN} hover:bg-white/10 hover:text-accent-foreground h-8 w-8">${LUCIDE.filter}</button>
+                        <a href="/catalog" aria-label="Full catalog JSON"><button class="${BTN} hover:bg-white/10 hover:text-accent-foreground h-8 w-8">${LUCIDE.download}</button></a>
+                      </div>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="grid rx-t-grid text-sm text-muted-foreground py-2">
+                        <div>Route</div><div>Service</div><div>Tier</div><div>Price</div>
+                      </div>
+          ${catalogPreviewRows()}
+                    </div>
+                    <p class="text-sm text-muted-foreground pt-2">Full machine-readable catalog is free: <a class="rx-accent rx-mono" href="/catalog" style="font-size:12.5px">GET /catalog</a></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="w-full h-full reveal" style="--rd:.1s">
+          <div class="rounded-2xl bg-background/40 relative border border-border/50">
+            <div class="group relative flex size-full rounded-xl p-4 lg:p-8 w-full overflow-hidden">
+              <div class="absolute inset-px z-10 rounded-xl rx-inner"></div>
+              <div class="relative z-30 w-full">
+                <div class="absolute bottom-0 right-0 bg-sky-500 w-1/4 h-1/4 blur-[8rem] z-20"></div>
+                <div class="space-y-4">
+                  <h3 class="text-xl font-semibold">Native trust endpoints</h3>
+                  <p class="text-sm text-muted-foreground">Seller verification and endpoint safety, straight from the census.</p>
+                  <div class="space-y-4">
+                    <div class="flex justify-between items-baseline">
+                      <div>
+                        <div class="text-3xl font-semibold rx-mono">$0.0002+</div>
+                        <div class="text-sm text-green-500 flex items-center gap-1 mt-2">${LUCIDE.trend}micro-priced trust intelligence</div>
+                      </div>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="grid rx-t-grid text-sm text-muted-foreground py-2">
+                        <div>Endpoint</div><div>Path</div><div>Price</div><div>Status</div>
+                      </div>
+          ${nativeRows()}
+                    </div>
+                    <p class="text-sm text-muted-foreground pt-2">Pay per call, no key, no account. Try one in the <a class="rx-accent" href="/playground">playground</a>.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chains / agent stack ───────────────────────────────────────── -->
+    <div class="relative flex flex-col items-center justify-center w-full py-20">
+      <div class="flex flex-col items-center text-center max-w-3xl mx-auto lg:absolute lg:top-1/4 inset-x-0 mt-12 lg:mt-0 z-20">
+        <h2 class="text-2xl md:text-4xl lg:text-6xl font-heading font-semibold !leading-snug reveal">One gateway,<br class="lg:hidden"/> every chain</h2>
+      </div>
+      <div class="w-full h-full lg:hidden">
+        <div class="flex flex-wrap items-center justify-center gap-6 mt-12 mb-8">
+          <div class="flex items-center justify-center size-16 p-3 rounded-full bg-gradient-to-b from-foreground/5 to-transparent shadow-xl backdrop-blur-lg" title="Algorand"><span class="size-7 text-foreground">${MARK_ALGORAND}</span></div>
+          <div class="flex items-center justify-center size-16 p-3 rounded-full bg-gradient-to-b from-foreground/5 to-transparent shadow-xl backdrop-blur-lg" title="Base"><span class="size-7 text-foreground">${MARK_BASE}</span></div>
+          <div class="flex items-center justify-center size-16 p-3 rounded-full bg-gradient-to-b from-foreground/5 to-transparent shadow-xl backdrop-blur-lg" title="Solana"><span class="size-7 text-foreground">${MARK_SOLANA}</span></div>
+          <div class="flex items-center justify-center size-16 p-3 rounded-full bg-gradient-to-b from-foreground/5 to-transparent shadow-xl backdrop-blur-lg" title="Ethereum"><span class="size-7 text-foreground">${MARK_ETHEREUM}</span></div>
+        </div>
+      </div>
+      <div class="flex flex-col items-center text-center max-w-3xl mx-auto lg:absolute lg:bottom-1/4 inset-x-0 z-20 mt-8 lg:mt-0">
+        <a href="/llms.txt">
+          <button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Read the agent spec${ARROW_RIGHT}</button>
+        </a>
+      </div>
+      <div class="w-full h-full">
+        <div class="relative hidden lg:flex items-center justify-center overflow-visible">
+          <div class="absolute top-1/2 -translate-y-1/2 right-1/4 w-3/5 h-14 lg:h-20 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full -rotate-12 blur-[8rem] -z-10"></div>
+          <div class="relative flex h-dvh w-full flex-col items-center justify-center overflow-visible">
+            <div class="pointer-events-none select-none absolute inset-0 [mask-image:linear-gradient(to_bottom,white,transparent)]">
+              <div class="absolute animate-ripple rounded-full bg-foreground/25 shadow-xl border [--i:0]" style="width:170px;height:170px;opacity:0.24;animation-delay:0s;border-style:solid;border-width:1px;border-color:hsl(var(--foreground), 0.05);top:50%;left:50%;transform:translate(-50%, -50%) scale(1)"></div>
+              <div class="absolute animate-ripple rounded-full bg-foreground/25 shadow-xl border [--i:1]" style="width:280px;height:280px;opacity:0.21;animation-delay:0.06s;border-style:solid;border-width:1px;border-color:hsl(var(--foreground), 0.1);top:50%;left:50%;transform:translate(-50%, -50%) scale(1)"></div>
+              <div class="absolute animate-ripple rounded-full bg-foreground/25 shadow-xl border [--i:2]" style="width:390px;height:390px;opacity:0.18;animation-delay:0.12s;border-style:solid;border-width:1px;border-color:hsl(var(--foreground), 0.15);top:50%;left:50%;transform:translate(-50%, -50%) scale(1)"></div>
+              <div class="absolute animate-ripple rounded-full bg-foreground/25 shadow-xl border [--i:3]" style="width:500px;height:500px;opacity:0.15;animation-delay:0.18s;border-style:solid;border-width:1px;border-color:hsl(var(--foreground), 0.2);top:50%;left:50%;transform:translate(-50%, -50%) scale(1)"></div>
+              <div class="absolute animate-ripple rounded-full bg-foreground/25 shadow-xl border [--i:4]" style="width:610px;height:610px;opacity:0.12;animation-delay:0.24s;border-style:solid;border-width:1px;border-color:hsl(var(--foreground), 0.25);top:50%;left:50%;transform:translate(-50%, -50%) scale(1)"></div>
+              <div class="absolute animate-ripple rounded-full bg-foreground/25 shadow-xl border [--i:5]" style="width:720px;height:720px;opacity:0.09;animation-delay:0.3s;border-style:dashed;border-width:1px;border-color:hsl(var(--foreground), 0.3);top:50%;left:50%;transform:translate(-50%, -50%) scale(1)"></div>
+            </div>
+          </div>
+          <div class="absolute z-20 flex items-center justify-center group">
+            <img alt="Roam402" loading="lazy" width="80" height="80" decoding="async" class="size-20 rounded-2xl group-hover:scale-110 transition-all duration-500" style="color:transparent" src="/icons/roam402.svg"/>
+          </div>
+          ${bubble(MARK_ALGORAND, "size-20", "size-10", "Algorand", "-translate-x-[125px] hidden lg:flex")}
+          ${bubble(MARK_BASE, "size-16", "size-7", "Base", "-translate-x-[210px]")}
+          ${bubble(MARK_SOLANA, "size-20", "size-9", "Solana", "translate-x-[125px]")}
+          ${bubble(MARK_ETHEREUM, "size-16", "size-7", "Ethereum", "translate-x-[210px]")}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CTA ────────────────────────────────────────────────────────── -->
+    <div class="relative flex flex-col items-center justify-center w-full">
+      <div class="w-full h-full py-20 max-w-6xl mx-auto reveal">
+        <div class="relative flex flex-col items-center justify-center py-12 lg:py-20 px-4 rounded-2xl lg:rounded-3xl bg-background/20 text-center border border-foreground/20 overflow-hidden">
+          <div class="absolute -bottom-1/8 left-1/3 -translate-x-1/2 w-44 h-32 lg:h-52 lg:w-1/3 rounded-full blur-[5rem] lg:blur-[10rem] -z-10" style="background:conic-gradient(from 0deg at 50% 50%, #818cf8 0deg, #4f46e5 180deg, #6366f1 360deg)"></div>
+          <h2 class="text-3xl md:text-5xl lg:text-6xl font-heading font-medium !leading-snug">Ready to let your <br/>agents <span class="font-subheading italic">roam</span>?</h2>
+          <p class="text-sm md:text-lg text-center text-accent-foreground/80 max-w-2xl mx-auto mt-4">Point any x402 client at the gateway and go. ${n} verified services, one USDC rail on Algorand, receipts from two chains.</p>
+          <div class="flex items-center justify-center mt-8 gap-x-4">
+            <a href="/catalog"><button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Explore catalog</button></a>
+            <a href="/llms.txt"><button class="${BTN} border border-input hover:bg-white/10 hover:text-accent-foreground h-10 px-8">Read agent spec</button></a>
+          </div>
+          <div class="rx-tags">
+            <span class="rx-tag">npm i roam402</span>
+            <span class="rx-tag">MCP server</span>
+            <span class="rx-tag">x402 v2</span>
+            <span class="rx-tag">USDC ASA ${cfg.chain.usdcAsaId}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer class="footer flex flex-col relative items-center justify-center border-t border-foreground/5 pb-8 px-6 lg:px-8 w-full max-w-6xl mx-auto lg:pt-12 pt-8 gap-4">
+  <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-muted-foreground">
+    <a class="link" href="/catalog">Catalog</a>
+    <a class="link" href="/playground">Playground</a>
+    <a class="link" href="/receipts">Receipts</a>
+    <a class="link" href="/llms.txt">llms.txt</a>
+    <a class="link" href="/.well-known/agents.json">agents.json</a>
+  </div>
+  <p class="text-sm text-muted-foreground md:mt-0 text-center">© 2026 Roam402 · built by <a class="rx-accent" href="https://agents-trust.com">Agents-Trust</a> · settles via <a class="rx-accent" href="https://facilitator.goplausible.xyz">GoPlausible</a></p>
+  <p class="rx-mono text-muted-foreground" style="font-size:11px">#x402-global-challenge</p>
+</footer>
+
+<script>
+(function () {
+  /* reveal-on-scroll: deterministic sweep (an IntersectionObserver misses
+     elements skipped over by instant jumps, e.g. anchor links) */
+  var els = [].slice.call(document.querySelectorAll(".reveal"));
+  function sweep() {
+    els = els.filter(function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.top < innerHeight * 0.92 || r.bottom < 0) { el.classList.add("in"); return false; }
+      return true;
+    });
+    if (!els.length) removeEventListener("scroll", onScroll);
+  }
+  var queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () { queued = false; sweep(); });
+  }
+  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", onScroll, { passive: true });
+  sweep();
+
+  var btn = document.getElementById("menu-btn");
+  var menu = document.getElementById("m-menu");
+  if (btn && menu) {
+    btn.addEventListener("click", function () {
+      var open = menu.classList.toggle("open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { menu.classList.remove("open"); });
+    });
+  }
+})();
+</script>
 </body>
 </html>`;
 }

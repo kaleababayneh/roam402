@@ -72,7 +72,7 @@ async function q<T>(path: string): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch(`${API}${path}`, { headers: { Accept: "application/json" } });
+      const res = await fetch(`${API}${path}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
       if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
       const body = (await res.json()) as { data: T };
       return body.data;
@@ -107,6 +107,69 @@ function describe(ep: RawEndpoint, row: LbRow): string {
   return `${base} · via Roam402 from ${row.domain} (${row.trust_tier} on Agents-Trust) · pay USDC on Algorand, fulfilled on Base, dual-chain receipts.`;
 }
 
+/**
+ * One service's pickable endpoints: fetch detail, https-normalise, dedupe by
+ * host+path (method-agnostic — catalogs carry http/https and null-method
+ * duplicates of the same interface; an explicitly-declared method beats a
+ * null-method row, then the cheaper price wins), filter to payable GET/POST
+ * under the cap, rank real interfaces first. Pure per-service — safe to run
+ * concurrently. null = service unusable (fetch/parse failure or no detail).
+ */
+async function harvestPicks(row: LbRow): Promise<RawEndpoint[] | null> {
+  let detail: { endpoints: string | null };
+  try {
+    const rowsD = await q<{ endpoints: string | null }[]>(`/q/service_detail?id=${row.entity_id}`);
+    const first = rowsD[0];
+    if (!first) return null;
+    detail = first;
+  } catch {
+    return null;
+  }
+
+  let eps: RawEndpoint[];
+  try {
+    eps = detail.endpoints ? (JSON.parse(detail.endpoints) as RawEndpoint[]) : [];
+  } catch {
+    return null;
+  }
+
+  const seen = new Map<string, RawEndpoint>();
+  for (const ep of eps) {
+    if (!ep.url) continue;
+    const url = ep.url.replace(/^http:\/\//, "https://");
+    let key: string;
+    try {
+      const u = new URL(url);
+      key = `${u.host}${u.pathname}`;
+    } catch {
+      continue;
+    }
+    const prev = seen.get(key);
+    const better =
+      !prev ||
+      (!!ep.catalog_method && !prev.catalog_method) ||
+      (!!ep.catalog_method === !!prev.catalog_method &&
+        (ep.price_usd ?? Infinity) < (prev.price_usd ?? Infinity));
+    if (better) seen.set(key, { ...ep, url });
+  }
+  return [...seen.values()]
+    .filter(
+      (ep) =>
+        ["GET", "POST"].includes((ep.catalog_method ?? "GET").toUpperCase()) &&
+        typeof ep.price_usd === "number" &&
+        ep.price_usd > 0 &&
+        ep.price_usd <= PRICE_CAP_USD &&
+        ep.is_live === true &&
+        isBaseSide(ep)
+    )
+    .sort(
+      (a, b) =>
+        Number(!!b.catalog_method) - Number(!!a.catalog_method) ||
+        (b.price_usd ?? 0) - (a.price_usd ?? 0)
+    )
+    .slice(0, MAX_PER_SERVICE);
+}
+
 async function main(): Promise<void> {
   console.log("→ leaderboard…");
   const rows = await q<LbRow[]>("/q/leaderboard");
@@ -120,69 +183,32 @@ async function main(): Promise<void> {
     );
   console.log(`  ${candidates.length} services at Established+`);
 
+  // Detail fetches are independent per service — a worker pool turns ~950
+  // sequential round-trips (10-25 min) into ~2 min. Everything stateful
+  // (slug set, MAX_ROUTES cap, census-rank order) stays in the sequential
+  // assembly pass below.
+  const HARVEST_CONCURRENCY = 10;
+  const harvested: (RawEndpoint[] | null)[] = new Array(candidates.length).fill(null);
+  let next = 0;
+  let fetched = 0;
+  await Promise.all(
+    Array.from({ length: HARVEST_CONCURRENCY }, async () => {
+      while (true) {
+        const i = next++;
+        if (i >= candidates.length) return;
+        harvested[i] = await harvestPicks(candidates[i]!);
+        if (++fetched % 100 === 0) console.log(`  …${fetched}/${candidates.length} service details`);
+      }
+    })
+  );
+
   const routes: WrappedRoute[] = [];
   const taken = new Set<string>();
 
-  for (const row of candidates) {
+  for (const [ci, row] of candidates.entries()) {
     if (routes.length >= MAX_ROUTES) break;
-    let detail: { endpoints: string | null };
-    try {
-      const rowsD = await q<{ endpoints: string | null }[]>(`/q/service_detail?id=${row.entity_id}`);
-      const first = rowsD[0];
-      if (!first) continue;
-      detail = first;
-    } catch {
-      continue;
-    }
-
-    let eps: RawEndpoint[];
-    try {
-      eps = detail.endpoints ? (JSON.parse(detail.endpoints) as RawEndpoint[]) : [];
-    } catch {
-      continue;
-    }
-
-    // https-normalise, then dedupe by host+path (method-agnostic — catalogs
-    // carry http/https and null-method duplicates of the same interface).
-    // Preference: an explicitly-declared method beats a null-method row
-    // (it is the real interface), then the cheaper price wins.
-    const seen = new Map<string, RawEndpoint>();
-    for (const ep of eps) {
-      if (!ep.url) continue;
-      const url = ep.url.replace(/^http:\/\//, "https://");
-      let key: string;
-      try {
-        const u = new URL(url);
-        key = `${u.host}${u.pathname}`;
-      } catch {
-        continue;
-      }
-      const prev = seen.get(key);
-      const better =
-        !prev ||
-        (!!ep.catalog_method && !prev.catalog_method) ||
-        (!!ep.catalog_method === !!prev.catalog_method &&
-          (ep.price_usd ?? Infinity) < (prev.price_usd ?? Infinity));
-      if (better) seen.set(key, { ...ep, url });
-    }
-    const picked = [...seen.values()]
-      .filter(
-        (ep) =>
-          ["GET", "POST"].includes((ep.catalog_method ?? "GET").toUpperCase()) &&
-          typeof ep.price_usd === "number" &&
-          ep.price_usd > 0 &&
-          ep.price_usd <= PRICE_CAP_USD &&
-          ep.is_live === true &&
-          isBaseSide(ep)
-      )
-      // Explicitly-declared interfaces first (the service's real product,
-      // e.g. POST /chat/completions), then price desc within each group.
-      .sort(
-        (a, b) =>
-          Number(!!b.catalog_method) - Number(!!a.catalog_method) ||
-          (b.price_usd ?? 0) - (a.price_usd ?? 0)
-      )
-      .slice(0, MAX_PER_SERVICE);
+    const picked = harvested[ci];
+    if (!picked) continue;
 
     // Origins often reuse one service-level blurb across every endpoint;
     // a wrong description is worse than a plain one. Keep the blurb for the

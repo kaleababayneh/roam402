@@ -19,11 +19,16 @@ import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
 
+/** Picker cap: at full coverage the catalog is ~2,300 routes — rendering
+ * them all makes this demo page ~400 KB. The select shows the census-ranked
+ * top slice; the full list stays queryable at /catalog. */
+const PICKER_MAX = 150;
+
 function options(): string {
   const native = NATIVE_ROUTES.map(
     (n) => `<option value="${n.path}" data-method="GET" data-price="${usdString(n.priceUsd)}">${n.path} · ${usdString(n.priceUsd)} · roam402 native</option>`
   );
-  const wrapped = catalog.routes.map(
+  const wrapped = catalog.routes.slice(0, PICKER_MAX).map(
     (r) =>
       `<option value="/r/${r.slug}" data-method="${r.method}" data-price="${usdString(r.roamPriceUsd)}">/r/${r.slug} · ${usdString(r.roamPriceUsd)} · ${r.service}</option>`
   );
@@ -58,7 +63,11 @@ function page(cfg: Config): string {
 </style></head><body><div class="wrap">
 <h1>Playground</h1>
 <p class="sub"><a href="/">← roam402</a> · pay-per-call the x402 economy in USDC on Algorand ${cfg.network} ·
-GoPlausible facilitator · <a href="/receipts">receipts</a></p>
+GoPlausible facilitator · <a href="/receipts">receipts</a>${
+    catalog.routes.length > PICKER_MAX
+      ? ` · picker shows top ${PICKER_MAX} of ${catalog.routes.length} routes — <a href="/catalog">full catalog</a>`
+      : ""
+  }</p>
 
 <div class="card">
   <label>Route</label>
