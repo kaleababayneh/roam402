@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { catalog, findRoute, testRoute, TEST_ROUTE_SLUG } from "../catalog";
+import { roamPriceUsd } from "../pricing";
 
 describe("catalog integrity", () => {
   it("has routes, all with parity pricing and valid shapes", () => {
     expect(catalog.routes.length).toBeGreaterThanOrEqual(40);
     for (const r of catalog.routes) {
-      expect(r.roamPriceUsd).toBe(r.originPriceUsd); // traction pricing
+      // Parity = exactly what the pricing policy dictates (ceil to µUSDC).
+      // Origin feeds carry float dust (0.006999999…), so never compare raw.
+      expect(r.roamPriceUsd).toBe(roamPriceUsd(r.originPriceUsd));
       expect(r.slug).toMatch(/^[a-z0-9-]+$/);
       expect(["GET", "POST"]).toContain(r.method);
       expect(r.originUrl.startsWith("https://")).toBe(true); // https-normalised

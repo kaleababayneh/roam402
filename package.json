@@ -2,7 +2,7 @@
   "name": "roam402-gateway",
   "version": "0.1.0",
   "private": true,
-  "description": "Roam402 \u2014 the x402 roaming gateway. Every verified x402 service, payable in USDC on Algorand. By Agents-Trust.",
+  "description": "Roam402 — the x402 roaming gateway. Every verified x402 service, payable in USDC on Algorand. By Agents-Trust.",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8787",
@@ -24,7 +24,8 @@
     "preorigin:dev": "node scripts/free-port.mjs 8988",
     "test": "vitest run",
     "soak": "tsx scripts/soak-test.ts",
-    "ship": "wrangler deploy"
+    "ship": "wrangler deploy",
+    "landing:capture": "node scripts/landing-mocks/capture-census.mjs"
   },
   "dependencies": {
     "@x402/avm": "2.19.0",
@@ -41,6 +42,7 @@
     "@hono/node-server": "^2.0.12",
     "@types/node": "^22.10.0",
     "algosdk": "^3.1.0",
+    "puppeteer-core": "^23.11.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^4.1.10",

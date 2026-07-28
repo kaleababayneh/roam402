@@ -65,7 +65,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
     return c.json({ error: "internal", message: "Unexpected gateway error", request: rid }, 500);
   });
 
-  mountLanding(app, cfg);
+  mountLanding(app, cfg, env.RECEIPTS);
   mountPlayground(app, cfg);
   mountStats(app);
   mountReceipts(app, receipts);

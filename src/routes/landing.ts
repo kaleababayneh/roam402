@@ -23,6 +23,7 @@ import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
+import { censusRows } from "../lib/census";
 
 /* ── inline SVG marks (simple-icons paths; Base mark from base.org brand) ── */
 
@@ -39,6 +40,29 @@ const ICON_USDC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const ARROW_RIGHT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 group-hover:translate-x-1 transition-all duration-300"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
 
 /* buttons share the template's compiled utility recipe */
+/** Live "settlement indexed" figure from the census, memoized 6h per
+ * isolate with a hard latency guard so the landing never waits on upstream. */
+let statCache: { v: string; at: number } | null = null;
+async function settlementIndexed(kv?: KVNamespace): Promise<string> {
+  if (statCache && Date.now() - statCache.at < 6 * 3_600_000) return statCache.v;
+  try {
+    const race = censusRows(kv);
+    race.catch(() => {}); // timeout may win the race; don't leave an unhandled rejection
+    const { rows } = await Promise.race([
+      race,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("census_slow")), 1500)),
+    ]);
+    const total = rows.reduce((sum, r) => sum + (Number(r.verified_volume_usd_total) || 0), 0);
+    if (total > 1_000_000) {
+      statCache = { v: `$${(total / 1_000_000).toFixed(1)}M`, at: Date.now() };
+      return statCache.v;
+    }
+  } catch {
+    /* cold isolate or slow upstream: fall through to the static claim */
+  }
+  return "$45M+";
+}
+
 const BTN = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium hover:-translate-y-0.5 transition-all duration-300`;
 
 const TIER_CLASS: Record<string, string> = {
@@ -113,7 +137,7 @@ const LUCIDE = {
   trend: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
 };
 
-function page(cfg: Config): string {
+function page(cfg: Config, settled: string): string {
   const n = catalog.routes.length;
   const services = new Set(catalog.routes.map((r) => r.service)).size;
   const base = cfg.publicBaseUrl || "";
@@ -181,7 +205,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
       </div>
       <div class="flex items-center gap-4">
         <a class="hidden lg:block" href="/playground">
-          <button class="${BTN} border border-input bg-blue-500 text-white hover:bg-blue-600 h-9 px-4 py-2">Open playground</button>
+          <button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-9 px-4 py-2">Open playground</button>
         </a>
         <button id="menu-btn" aria-label="Menu" aria-expanded="false" class="${BTN} hover:bg-white/10 hover:text-accent-foreground h-8 w-8 lg:hidden" type="button">${LUCIDE.menu}</button>
       </div>
@@ -210,9 +234,12 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
         <div class="flex flex-col items-center justify-center text-center gap-y-4 bg-background/0">
           <div class="w-full h-full relative overflow-hidden reveal">
             <span class="rx-pill mx-auto">
-              <span class="rx-pill-inner">
+              <span class="rx-pill-inner rx-pill-lg">
                 <span class="px-2 py-[0.5px] h-[18px] tracking-wide flex items-center justify-center rounded-full bg-gradient-to-r from-sky-400 to-blue-600 text-[9px] font-medium text-white">NEW</span>
-                x402 roaming gateway · Algorand ${cfg.network}
+
+                x402 roaming gateway
+                <span class="rx-pill-mark" aria-hidden="true">${MARK_ALGORAND}</span>
+                Algorand
               </span>
             </span>
           </div>
@@ -237,14 +264,14 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
             <div class="rx-statline">
               <span><b>${n}</b>wrapped routes</span>
               <span><b>${services}</b>verified services</span>
-              <span><b class="rx-money">$45M+</b>settlement indexed</span>
+              <span><b class="rx-money">${settled}</b>settlement indexed</span>
               <span><b>2</b>chains per receipt</span>
             </div>
           </div>
 
           <!-- live census preview (real data, not a mock) -->
           <div class="w-full h-full relative reveal" style="--rd:.3s">
-            <a href="https://agents-trust.com" aria-label="Open the Agents-Trust census">
+            <a class="rx-lift" href="https://agents-trust.com" aria-label="Open the Agents-Trust census">
               <div class="relative rounded-xl lg:rounded-[32px] border border-border p-2 backdrop-blur-lg mt-10 max-w-6xl mx-auto">
                 <div class="absolute top-1/8 left-1/2 -z-10 bg-gradient-to-r from-sky-500 to-blue-600 w-1/2 lg:w-3/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[4rem] lg:blur-[10rem] animate-image-glow"></div>
                 <div class="hidden lg:block absolute -top-1/8 left-1/2 -z-20 bg-blue-600 w-1/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[10rem] animate-image-glow"></div>
@@ -420,6 +447,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
     <a class="link" href="/receipts">Receipts</a>
     <a class="link" href="/llms.txt">llms.txt</a>
     <a class="link" href="/.well-known/agents.json">agents.json</a>
+    <a class="link rx-status" href="/healthz"><span class="d" id="st-dot"></span>Status</a>
   </div>
   <p class="text-sm text-muted-foreground md:mt-0 text-center">© 2026 Roam402 · built by <a class="rx-accent" href="https://agents-trust.com">Agents-Trust</a></p>
 </footer>
@@ -446,6 +474,12 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
   addEventListener("scroll", onScroll, { passive: true });
   addEventListener("resize", onScroll, { passive: true });
   sweep();
+
+  /* footer status dot: green only when /healthz really says ok */
+  fetch("/healthz").then(function (r) { return r.json(); }).then(function (h) {
+    var d = document.getElementById("st-dot");
+    if (d && h && h.ok) d.classList.add("ok");
+  }).catch(function () {});
 
   var btn = document.getElementById("menu-btn");
   var menu = document.getElementById("m-menu");
@@ -481,8 +515,8 @@ Operated by Agents-Trust (https://agents-trust.com) — the observatory
 indexing $45M+ of real x402 settlement.
 `;
 
-export function mountLanding(app: Hono<AppEnv>, cfg: Config): void {
-  app.get("/", (c) => c.html(page(cfg)));
+export function mountLanding(app: Hono<AppEnv>, cfg: Config, kv?: KVNamespace): void {
+  app.get("/", async (c) => c.html(page(cfg, await settlementIndexed(kv))));
   app.get("/llms.txt", (c) => c.text(LLMS_TXT(catalog.routes.length)));
   app.get("/.well-known/agents.json", (c) =>
     c.json({

@@ -94,9 +94,13 @@ function slugify(domain: string, url: string, taken: Set<string>): string {
   const svc = domain.replace(/\.[a-z]+$/i, "").replace(/[^a-z0-9]+/gi, "");
   const tail =
     new URL(url).pathname.split("/").filter(Boolean).slice(-2).join("-").replace(/[^a-z0-9-]+/gi, "") || "root";
-  let slug = `${svc}-${tail}`.toLowerCase().slice(0, 48);
+  // Truncate the BASE, then append the counter OUTSIDE the slice — slicing
+  // the counter off left the slug unchanged and this loop spinning forever
+  // (32 CPU-hours of proof) once 48-char names collided at full coverage.
+  const base = `${svc}-${tail}`.toLowerCase().slice(0, 48);
+  let slug = base;
   let i = 2;
-  while (taken.has(slug)) slug = `${svc}-${tail}-${i++}`.toLowerCase().slice(0, 48);
+  while (taken.has(slug)) slug = `${base.slice(0, 44)}-${i++}`;
   taken.add(slug);
   return slug;
 }
