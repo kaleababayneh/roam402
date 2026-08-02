@@ -31,7 +31,7 @@ export const NATIVE_ROUTES: NativeRoute[] = [
     path: "/discover",
     priceUsd: 0.0001,
     description:
-      "Machine-readable catalog of 50+ verified x402 services callable through this merchant — LLM inference, token security, market data — each with USDC price, Agents-Trust tier and liveness. Same payload is free at /catalog; this paid twin exists so the index itself is a discoverable x402 resource.",
+      `Machine-readable catalog of ${catalog.routes.length} verified x402 services callable through this merchant — LLM inference, token security, market data — each with USDC price, Agents-Trust tier and liveness. Same payload is free at /catalog; this paid twin exists so the index itself is a discoverable x402 resource.`,
     discovery: declareDiscoveryExtension({
       input: {},
       output: {

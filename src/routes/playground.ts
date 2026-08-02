@@ -148,9 +148,12 @@ $("connect").addEventListener("click", async () => {
           txn: algosdk.decodeUnsignedTransaction(raw),
           signers: want.has(i) ? [address] : [],
         }));
-        const signed = await pera.signTransaction([group]);
+        const res = await pera.signTransaction([group]);
+        // SDK versions differ: full-length arrays with holes vs signed-only.
+        const signedOnly = res.filter(Boolean);
+        console.log("[roam402] pera returned", res.length, "entries,", signedOnly.length, "signed");
         let k = 0;
-        return txns.map((_, i) => (want.has(i) ? signed[k++] : null));
+        return txns.map((_, i) => (want.has(i) ? signedOnly[k++] : null));
       },
     };
     const client = new core.x402Client().register(${JSON.stringify(cfg.chain.caip2)}, new avm.ExactAvmScheme(signer));
@@ -172,6 +175,10 @@ $("pay").addEventListener("click", async () => {
       : {};
     const res = await payingFetch(routeUrl(), init);
     const text = await res.text();
+    if (res.status === 402) {
+      out("payment signed but NOT accepted (no money moved).\\nLikely causes:\\n  1. paying the merchant from its own wallet — connect a DIFFERENT funded wallet\\n  2. challenge expired — hit Pay & call again and approve promptly\\nDetails logged to the browser console.");
+      return;
+    }
     out({
       status: res.status,
       receipts: {
