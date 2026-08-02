@@ -12,9 +12,14 @@
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 
 export function loadBaseWallet(privateKey: string | undefined): PrivateKeyAccount | null {
-  if (!privateKey || !privateKey.startsWith("0x")) return null;
+  // Wallet apps export with or without the 0x prefix, and interactive
+  // `wrangler secret put` pastes can carry stray whitespace — normalise both.
+  const raw = privateKey?.trim();
+  if (!raw) return null;
+  const hex = /^[0-9a-fA-F]{64}$/.test(raw) ? `0x${raw}` : raw;
+  if (!hex.startsWith("0x")) return null;
   try {
-    return privateKeyToAccount(privateKey as `0x${string}`);
+    return privateKeyToAccount(hex as `0x${string}`);
   } catch {
     return null;
   }

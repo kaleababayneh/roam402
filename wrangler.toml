@@ -27,8 +27,8 @@ directory = "./public"
 # Secrets (never in this file, set via `wrangler secret put`):
 #   BASE_WALLET_PRIVATE_KEY — hot wallet that pays origin services on Base.
 [vars]
-NETWORK = "testnet"
-PAY_TO_ADDRESS = "3CPTPCRK7LVRIH3LKNJBWH7PHIYWLPYCQPDX3SDZSX4XCXMSSLNSGEDY3Q" # TESTNET staging merchant — replace at mainnet cutover
+NETWORK = "mainnet"
+PAY_TO_ADDRESS = "CDRQ77BVFVQZO7IH4YI7ZFHEOBTRGCQ42SNEIFFMSPI2HYFOXWJOCVHO4Y" # MAINNET merchant (Pera) — PERMANENT competition identity, never change
 FACILITATOR_URL = "https://facilitator.goplausible.xyz"
 KILL_SWITCH = "off"                       # "on" → every paid route returns 503
 PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
