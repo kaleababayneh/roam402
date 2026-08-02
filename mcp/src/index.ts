@@ -17,8 +17,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createRoamClient, signerFromMnemonic } from "roam402";
-import { loadMcpConfig } from "./config";
-import { registerTools } from "./tools";
+import { loadMcpConfig } from "./config.js";
+import { registerTools } from "./tools.js";
 
 const cfg = loadMcpConfig(process.env);
 const signer = await signerFromMnemonic(cfg.mnemonic);

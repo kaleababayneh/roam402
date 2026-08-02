@@ -1,8 +1,9 @@
 # roam402-mcp
 
 MCP server for [Roam402](https://roam402.com): give any tool-calling agent
-(Claude, Cursor, anything MCP) the whole x402 economy, paid in USDC on
-Algorand. Five tools, one config block, no code.
+(Claude, Cursor, anything MCP) the whole x402 economy — 2,349 routes across
+751 verified services — paid in USDC on Algorand mainnet. Five tools, one
+config block, no code.
 
 ```json
 {

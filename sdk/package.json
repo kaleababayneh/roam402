@@ -1,19 +1,27 @@
 {
   "name": "roam402",
-  "version": "0.1.0-alpha.0",
-  "description": "Client for Roam402 — every verified x402 service, payable in USDC on Algorand. One line to give your agent the whole x402 economy.",
+  "version": "0.1.0",
+  "description": "Client for Roam402 \u2014 every verified x402 service, payable in USDC on Algorand. One line to give your agent the whole x402 economy.",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "license": "MIT",
-  "keywords": ["x402", "algorand", "agents", "payments", "usdc", "roam402", "agents-trust"],
-  "homepage": "https://agents-trust.com",
+  "keywords": [
+    "x402",
+    "algorand",
+    "agents",
+    "payments",
+    "usdc",
+    "roam402",
+    "agents-trust"
+  ],
+  "homepage": "https://roam402.com",
   "dependencies": {
     "@x402/avm": "2.19.0",
     "@x402/core": "2.19.0",
@@ -23,6 +31,21 @@
     "algosdk": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "algosdk": { "optional": true }
+    "algosdk": {
+      "optional": true
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaleababayneh/roam402.git",
+    "directory": "sdk"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm build"
   }
 }

@@ -1,7 +1,7 @@
 # roam402
 
-Client SDK for [Roam402](https://roam402.com) — every verified x402 service,
-payable in USDC on Algorand. One merchant, dual-chain receipts, trust tiers
+Client SDK for [Roam402](https://roam402.com) — **2,349 routes across 751
+verified x402 services**, payable in USDC on Algorand mainnet. One merchant, dual-chain receipts, trust tiers
 from the [Agents-Trust](https://agents-trust.com) census.
 
 ```bash

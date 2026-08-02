@@ -13,7 +13,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import algosdk from "algosdk";
 import type { RoamClient } from "roam402";
-import { ALGOD_URL, USDC_ASA, type McpConfig } from "./config";
+import { ALGOD_URL, USDC_ASA, type McpConfig } from "./config.js";
 
 const MAX_TEXT = 8_000;
 
