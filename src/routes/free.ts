@@ -28,6 +28,21 @@ export function catalogPayload(cfg: Config): Record<string, unknown> {
       description: n.description,
     })),
     categories: [...new Set(catalog.routes.map((r) => (r.category ?? "other")))].sort(),
+    stats: (() => {
+      const byCategory: Record<string, { services: number; routes: number }> = {};
+      const svcSets: Record<string, Set<string>> = {};
+      for (const r of catalog.routes) {
+        const k = r.category ?? "other";
+        (byCategory[k] ??= { services: 0, routes: 0 }).routes += 1;
+        (svcSets[k] ??= new Set()).add(r.service);
+      }
+      for (const k of Object.keys(byCategory)) byCategory[k]!.services = svcSets[k]!.size;
+      return {
+        routes: catalog.routes.length,
+        services: new Set(catalog.routes.map((r) => r.service)).size,
+        byCategory,
+      };
+    })(),
     wrapped: catalog.routes.map((r) => ({
       path: `/r/${r.slug}`,
       method: r.method,

@@ -75,6 +75,12 @@ export interface CatalogEntry {
   description: string;
 }
 
+export interface CatalogStats {
+  routes: number;
+  services: number;
+  byCategory: Record<string, { services: number; routes: number }>;
+}
+
 export interface CatalogFilter {
   q?: string;
   category?: string;
@@ -90,7 +96,7 @@ export interface RoamClient {
   /** Pre-flight safety check for any x402 endpoint URL (paid, $0.0002). */
   precheck(url: string): Promise<PrecheckReport>;
   /** Free machine-readable catalog; pass a filter to search server-side. */
-  catalog(filter?: CatalogFilter): Promise<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[] }>;
+  catalog(filter?: CatalogFilter): Promise<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[]; stats?: CatalogStats }>;
   /** The payment-enabled fetch, for calling the gateway directly. */
   fetch: typeof fetch;
 }
@@ -135,7 +141,7 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
       if (filter?.service) params.set("service", filter.service);
       if (filter?.limit) params.set("limit", String(filter.limit));
       const qs = params.size ? `?${params}` : "";
-      return getJson<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[] }>(`/catalog${qs}`);
+      return getJson<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[]; stats?: CatalogStats }>(`/catalog${qs}`);
     },
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "roam402-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for Roam402 \u2014 give any agent the whole x402 economy, paid in USDC on Algorand. Tools: catalog, trust, precheck, paid service calls, balance.",
   "type": "module",
   "bin": {

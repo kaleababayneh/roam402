@@ -61,26 +61,23 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
     async ({ search, category, service }) => {
       try {
         if (!search && !category && !service) {
-          // Summary mode: categories with counts + the native trust layer.
+          // Summary mode: the gateway's aggregate stats cover the FULL
+          // catalog even though the unfiltered payload is truncated at 500.
           const cat = await roam.catalog();
-          const byCategory = new Map<string, { routes: number; services: Set<string> }>();
-          for (const w of cat.wrapped) {
-            const k = w.category ?? "other";
-            const e = byCategory.get(k) ?? { routes: 0, services: new Set<string>() };
-            e.routes += 1;
-            if (w.service) e.services.add(w.service);
-            byCategory.set(k, e);
-          }
+          const stats = cat.stats;
+          const byCategory: [string, { services: number; routes: number }][] = stats
+            ? Object.entries(stats.byCategory)
+            : [...new Map(cat.wrapped.map((w) => [w.category ?? "other", { services: 1, routes: 1 }])).entries()];
           const lines = [
-            `ROAM402 CATALOG — ${byCategory.size} categories · ${new Set(cat.wrapped.map((w) => w.service)).size} services · ${cat.wrapped.length} routes`,
+            `ROAM402 CATALOG — ${byCategory.length} categories · ${stats?.services ?? "?"} services · ${stats?.routes ?? cat.wrapped.length} routes`,
             "",
             "NATIVE (trust layer):",
             ...cat.native.map((n) => `  ${n.path} · ${n.price} — ${n.description.slice(0, 100)}`),
             "",
             "CATEGORIES (call again with {category} or {search} to drill down):",
-            ...[...byCategory.entries()]
+            ...byCategory
               .sort((a, b) => b[1].routes - a[1].routes)
-              .map(([k, e]) => `  ${k}: ${e.services.size} services · ${e.routes} routes`),
+              .map(([k, e]) => `  ${k}: ${e.services} services · ${e.routes} routes`),
           ];
           return ok(clip(lines.join("\n")));
         }

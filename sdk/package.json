@@ -1,6 +1,6 @@
 {
   "name": "roam402",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Client for Roam402 \u2014 every verified x402 service, payable in USDC on Algorand. One line to give your agent the whole x402 economy.",
   "type": "module",
   "main": "dist/index.js",
