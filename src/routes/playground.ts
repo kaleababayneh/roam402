@@ -140,11 +140,17 @@ $("connect").addEventListener("click", async () => {
     const signer = {
       address,
       async signTransactions(txns, indexes) {
-        const groups = txns.map((raw) => [{ txn: algosdk.decodeUnsignedTransaction(raw), signers: [address] }]);
-        const toSign = indexes ? indexes.map((i) => groups[i]) : groups;
-        const signed = await pera.signTransaction(toSign);
+        // Pera refuses partial groups ("Missing transactions") — it must SEE
+        // the whole atomic group. signers:[] marks display-only entries (the
+        // facilitator's fee-abstraction txn); we sign only our indexes.
+        const want = new Set(indexes ?? txns.map((_, i) => i));
+        const group = txns.map((raw, i) => ({
+          txn: algosdk.decodeUnsignedTransaction(raw),
+          signers: want.has(i) ? [address] : [],
+        }));
+        const signed = await pera.signTransaction([group]);
         let k = 0;
-        return txns.map((_, i) => (!indexes || indexes.includes(i) ? signed[k++] : null));
+        return txns.map((_, i) => (want.has(i) ? signed[k++] : null));
       },
     };
     const client = new core.x402Client().register(${JSON.stringify(cfg.chain.caip2)}, new avm.ExactAvmScheme(signer));
