@@ -124,10 +124,10 @@ $("connect").addEventListener("click", async () => {
   try {
     out("loading wallet + x402 modules…");
     const [{ PeraWalletConnect }, core, avm, fetchMod] = await Promise.all([
-      import("https://esm.sh/@perawallet/connect@1.4.2"),
-      import("https://esm.sh/@x402/core@2.19.0/client"),
-      import("https://esm.sh/@x402/avm@2.19.0/exact/client?deps=algosdk@3.6.0"),
-      import("https://esm.sh/@x402/fetch@2.19.0"),
+      import("/js/pera-connect.js"),
+      import("https://esm.sh/@x402/core@2.19.0/client?bundle"),
+      import("https://esm.sh/@x402/avm@2.19.0/exact/client?bundle&deps=algosdk@3.6.0"),
+      import("https://esm.sh/@x402/fetch@2.19.0?bundle"),
     ]);
     const pera = new PeraWalletConnect();
     const accounts = await pera.connect().catch(async (e) => {
@@ -136,7 +136,7 @@ $("connect").addEventListener("click", async () => {
     });
     const address = accounts[0];
     // Pera adapter → ClientAvmSigner: decode unsigned txn bytes, let Pera sign.
-    const algosdk = (await import("https://esm.sh/algosdk@3.6.0")).default;
+    const algosdk = (await import("https://esm.sh/algosdk@3.6.0?bundle")).default;
     const signer = {
       address,
       async signTransactions(txns, indexes) {
