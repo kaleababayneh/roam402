@@ -113,7 +113,15 @@ export async function callOrigin(
     );
   }
 
-  if (!res.ok) throw originError(res.status);
+  if (!res.ok) {
+    // The origin's own words are the best debugging signal ("Missing required
+    // query parameter: username") — pass a sanitized snippet to the buyer.
+    const snippet = await res
+      .text()
+      .then((t) => t.replace(/\s+/g, " ").trim().slice(0, 180))
+      .catch(() => "");
+    throw originError(res.status, snippet || undefined);
+  }
 
   return {
     response: res,

@@ -13,7 +13,9 @@ export class GatewayError extends Error {
     /** Machine-readable reason for agents. */
     readonly code: string,
     /** Hint for agents: is retrying this request sensible? */
-    readonly retryable: boolean = false
+    readonly retryable: boolean = false,
+    /** Human-readable detail (e.g. the origin's own error text, sanitized). */
+    readonly hint?: string
   ) {
     super(message);
     this.name = "GatewayError";
@@ -26,10 +28,10 @@ export const killSwitchError = () =>
 export const breakerOpenError = (route: string) =>
   new GatewayError(`Origin for ${route} is failing — route paused`, 503, "origin_unhealthy", true);
 
-export const originError = (status: number) =>
+export const originError = (status: number, hint?: string) =>
   // Post-payment failure: the origin was already paid — auto-retrying would
   // double-spend, so this is never retryable at the protocol level.
-  new GatewayError(`Origin service failed (upstream ${status})`, 502, "origin_error", false);
+  new GatewayError(`Origin service failed (upstream ${status})`, 502, "origin_error", false, hint);
 
 export const originUnreachable = () =>
   new GatewayError("Origin service unreachable (network error)", 502, "origin_unreachable", true);

@@ -22,6 +22,7 @@ import { buildGuard, buildWrappedHandler } from "./routes/wrapped";
 import type { AppEnv } from "./lib/appEnv";
 import { mountNativeRoutes } from "./routes/native";
 import { mountFreeRoutes } from "./routes/free";
+import { mountSchema } from "./routes/schema";
 import { mountLanding } from "./routes/landing";
 import { mountReceipts } from "./routes/receipts";
 import { mountStats } from "./routes/stats";
@@ -59,7 +60,10 @@ async function buildRuntime(env: Env): Promise<Runtime> {
     const rid = c.get("rid");
     if (err instanceof GatewayError) {
       log("gateway_error", { rid, code: err.code, status: err.status });
-      return c.json({ error: err.code, message: err.message, retryable: err.retryable, request: rid }, err.status as 400);
+      return c.json(
+        { error: err.code, message: err.message, ...(err.hint ? { hint: err.hint } : {}), retryable: err.retryable, request: rid },
+        err.status as 400
+      );
     }
     log("unhandled_error", { rid, message: err instanceof Error ? err.message : String(err) });
     return c.json({ error: "internal", message: "Unexpected gateway error", request: rid }, 500);
@@ -70,6 +74,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   mountStats(app);
   mountReceipts(app, receipts);
   mountFreeRoutes(app, cfg, wallet !== null, env.RECEIPTS);
+  mountSchema(app, env.RECEIPTS);
   app.use("*", buildGuard(cfg, wallet !== null, env.RECEIPTS));
   app.use("*", await buildPaymentMiddleware(cfg));
   mountNativeRoutes(app, cfg, env.RECEIPTS, receipts);
