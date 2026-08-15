@@ -37,7 +37,10 @@ export interface RouteSchema {
   bodySuggested?: boolean;
   /** The origin's own usage blurb, when it publishes one. */
   note: string | null;
-  source: "native" | "origin-402" | "origin-error" | "none";
+  /** True when the origin answered a parameterless probe with a plain 402
+   * payment gate — strong evidence the route needs no query inputs. */
+  bare?: boolean;
+  source: "native" | "origin-402" | "origin-error" | "description" | "none";
 }
 
 const KV_TTL_S = 24 * 3600;
@@ -118,23 +121,69 @@ function decodeChallengeHeader(raw: string | null): any {
 
 /** Sensible starting bodies for the huge OpenAI/Anthropic-compatible family,
  * used only when the origin publishes no example of its own. */
-const BODY_SUGGESTIONS: [RegExp, Record<string, unknown>][] = [
-  [/embeddings?$/i, { model: "text-embedding-3-small", input: "The quick brown fox jumps over the lazy dog" }],
-  [/chat\/completions$/i, { model: "gpt-4o-mini", messages: [{ role: "user", content: "hello" }] }],
-  [/(?<!chat\/)completions$/i, { model: "gpt-3.5-turbo-instruct", prompt: "hello", max_tokens: 32 }],
-  [/messages$/i, { model: "claude-3-5-haiku-latest", max_tokens: 128, messages: [{ role: "user", content: "hello" }] }],
-  [/(audio\/speech|tts)$/i, { model: "tts-1", input: "Hello from roam402", voice: "alloy" }],
-  [/images\/generations$/i, { model: "dall-e-3", prompt: "a tiny satellite orbiting a planet", n: 1, size: "1024x1024" }],
-  [/moderations$/i, { model: "omni-moderation-latest", input: "hello" }],
+type BodyFamily = "embeddings" | "chat" | "completions" | "messages" | "speech" | "images" | "moderations";
+const BODY_TEMPLATES: [RegExp, BodyFamily, () => Record<string, unknown>][] = [
+  [/embeddings?$/i, "embeddings", () => ({ model: "text-embedding-3-small", input: "The quick brown fox jumps over the lazy dog" })],
+  [/chat\/completions$/i, "chat", () => ({ model: "gpt-4o-mini", messages: [{ role: "user", content: "hello" }] })],
+  [/(?<!chat\/)completions$/i, "completions", () => ({ model: "gpt-3.5-turbo-instruct", prompt: "hello", max_tokens: 32 })],
+  [/messages$/i, "messages", () => ({ model: "claude-3-5-haiku-latest", max_tokens: 128, messages: [{ role: "user", content: "hello" }] })],
+  [/(audio\/speech|tts)$/i, "speech", () => ({ model: "tts-1", input: "Hello from roam402", voice: "alloy" })],
+  [/images\/generations$/i, "images", () => ({ model: "dall-e-3", prompt: "a tiny satellite orbiting a planet", n: 1, size: "1024x1024" })],
+  [/moderations$/i, "moderations", () => ({ model: "omni-moderation-latest", input: "hello" })],
 ];
-function suggestBody(originUrl: string): string | null {
+const MODEL_ID_RE = /^[A-Za-z0-9/_.:\-]{1,64}$/;
+
+/** LLM routers expose a sibling /models list (usually free). Read it and pick
+ * a real model for the family instead of guessing names the service may not
+ * serve ("Unknown model: …"). */
+async function discoverModel(originUrl: string, family: BodyFamily): Promise<string | null> {
+  let u: URL;
+  try {
+    u = new URL(originUrl);
+  } catch {
+    return null;
+  }
+  const stripped = u.pathname
+    .replace(/\/(chat\/completions|completions|messages|embeddings|audio\/speech|tts|images\/generations|moderations)\/?$/i, "");
+  const modelsUrl = `${u.origin}${stripped.replace(/\/$/, "")}/models`;
+  try {
+    const res = await fetch(modelsUrl, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    const j = (await res.json()) as any;
+    const list: any[] = Array.isArray(j?.data) ? j.data : Array.isArray(j?.models) ? j.models : Array.isArray(j) ? j : [];
+    const ids = list
+      .map((m) => (typeof m === "string" ? m : m?.id))
+      .filter((x): x is string => typeof x === "string" && MODEL_ID_RE.test(x));
+    if (!ids.length) return null;
+    const pick = (re: RegExp) => ids.find((id) => re.test(id));
+    if (family === "messages") return pick(/claude|anthropic/i) ?? ids[0]!;
+    if (family === "embeddings") return pick(/embed/i) ?? ids[0]!;
+    if (family === "speech") return pick(/tts|speech|audio/i) ?? ids[0]!;
+    if (family === "images") return pick(/dall|image|flux|sd/i) ?? ids[0]!;
+    if (family === "moderations") return pick(/moderat/i) ?? ids[0]!;
+    // chat/completions: prefer a cheap tier, else the service's first model
+    return pick(/mini|flash|haiku|small|lite|nano/i) ?? ids[0]!;
+  } catch {
+    return null;
+  }
+}
+
+async function suggestBody(originUrl: string): Promise<string | null> {
   let path = "";
   try {
     path = new URL(originUrl).pathname;
   } catch {
     return null;
   }
-  for (const [re, body] of BODY_SUGGESTIONS) if (re.test(path)) return JSON.stringify(body, null, 2);
+  for (const [re, family, tpl] of BODY_TEMPLATES) {
+    if (!re.test(path)) continue;
+    const body = tpl();
+    if ("model" in body) {
+      const real = await discoverModel(originUrl, family);
+      if (real) body.model = real;
+    }
+    return JSON.stringify(body, null, 2);
+  }
   return null;
 }
 
@@ -175,7 +224,16 @@ async function probeOrigin(originUrl: string, method: "GET" | "POST"): Promise<O
   if (challenge) {
     const { params, bodyExample } = fromBazaar(challenge.extensions);
     const note = clamp(challenge.resource?.description, 240) || null;
+    if (params === null && res.status === 402) {
+      // The origin took our bare request straight to the payment gate: had it
+      // required query params it would have rejected first (like twit.sh does).
+      return { params: [], bodyExample, note, bare: true, source: "origin-402" };
+    }
     return { params, bodyExample, note, source: params !== null || bodyExample ? "origin-402" : "none" };
+  }
+  if (res.status === 402) {
+    // 402 without a decodable challenge: still a payment gate reached bare.
+    return { params: [], bodyExample: null, note: null, bare: true, source: "origin-402" };
   }
 
   // Origins that validate inputs before charging answer 4xx with the missing
@@ -195,6 +253,25 @@ async function probeOrigin(originUrl: string, method: "GET" | "POST"): Promise<O
     return { ...none, note: text || null };
   }
   return none;
+}
+
+/** Last resort: mine "?key=value" patterns and "param: x" mentions out of the
+ * catalog description so the builder is never a pair of blank boxes. */
+function paramsFromText(text: string): RouteParam[] | null {
+  const found = new Map<string, string>();
+  for (const m of text.matchAll(/[?&]([A-Za-z0-9_]{1,30})=([A-Za-z0-9_.:%{}\-]{1,40})?/g)) {
+    const name = m[1]!;
+    if (!JUNK_NAMES.has(name.toLowerCase()) && NAME_RE.test(name)) found.set(name, m[2] ?? "");
+  }
+  const single = paramFromErrorText(text);
+  if (single && !found.has(single)) found.set(single, "");
+  if (!found.size) return null;
+  return [...found.entries()].slice(0, 8).map(([name, example]) => ({
+    name,
+    required: false,
+    example: clamp(example.replace(/[{}]/g, ""), 60),
+    description: "From the route description — adjust if the call complains.",
+  }));
 }
 
 const memo = new Map<string, RouteSchema>();
@@ -222,7 +299,7 @@ export function mountSchema(app: Hono<AppEnv>, kv: KVNamespace | undefined): voi
       c.header("Cache-Control", "public, max-age=300");
       return c.json(cached);
     }
-    const kvKey = `schema:v4:${route}`;
+    const kvKey = `schema:v6:${route}`;
     const snap = await kv?.get<RouteSchema>(kvKey, "json").catch(() => null);
     if (snap) {
       memo.set(route, snap);
@@ -232,8 +309,15 @@ export function mountSchema(app: Hono<AppEnv>, kv: KVNamespace | undefined): voi
 
     const probed = await probeOrigin(rt.originUrl, rt.method);
     const out: RouteSchema = { route, method: rt.method, ...probed };
+    if (out.params === null && rt.method === "GET") {
+      const mined = paramsFromText(`${rt.description} ${out.note ?? ""}`);
+      if (mined) {
+        out.params = mined;
+        out.source = "description";
+      }
+    }
     if (rt.method === "POST" && !out.bodyExample) {
-      const suggested = suggestBody(rt.originUrl);
+      const suggested = await suggestBody(rt.originUrl);
       if (suggested) {
         out.bodyExample = suggested;
         out.bodySuggested = true;

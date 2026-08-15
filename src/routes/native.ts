@@ -14,7 +14,7 @@ import type { Config } from "../config";
 import { GatewayError } from "../lib/errors";
 import { catalogPayload } from "./free";
 import type { ReceiptStore } from "../receipts/store";
-import { censusRows } from "../lib/census";
+import { censusRows, trustDomain, type TrustDomainRow } from "../lib/census";
 import { catalog } from "../catalog";
 import { getRouteHealth } from "../fulfillment/health";
 
@@ -85,6 +85,70 @@ export function nativeRouteExtensions(path: string): RouteConfig["extensions"] {
   return route?.discovery as RouteConfig["extensions"];
 }
 
+const asNum = (v: unknown): number | null => {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+const asFlag = (v: unknown): boolean | null => (v == null ? null : v === true || Number(v) === 1);
+
+/** Rich /trust payload from one CH mart row (additive over the legacy shape). */
+function richTrustPayload(domain: string, r: TrustDomainRow): Record<string, unknown> {
+  const scored = (r.trust_row_entity_id ?? "") !== "";
+  return {
+    domain,
+    found: true,
+    display_name: r.display_name ?? null,
+    trust_tier: r.trust_tier ?? "Unrated",
+    trust_score: asNum(r.trust_score),
+    verified_volume_usd_total: asNum(r.verified_volume_usd_total),
+    verified_tx_total: asNum(r.verified_tx_total),
+    first_settlement_at: r.first_settlement_at ?? null,
+    last_settlement_at: r.last_settlement_at ?? null,
+    category: r.category ?? null,
+    windows: {
+      last_7d: { volume_usd: asNum(r.verified_last_7d_volume), tx: asNum(r.verified_last_7d_tx) },
+      last_30d: { volume_usd: asNum(r.verified_last_30d_volume), tx: asNum(r.verified_last_30d_tx) },
+      last_90d: { volume_usd: asNum(r.verified_last_90d_volume), tx: asNum(r.verified_last_90d_tx) },
+    },
+    buyers: { repeat: asNum(r.repeat_buyers), retained_30d: asNum(r.retained_30d_buyers) },
+    concentration: {
+      top_payer_share: asNum(r.top_payer_share),
+      self_trade_share: asNum(r.self_trade_share),
+    },
+    score: scored
+      ? {
+          model_version: r.trust_model_version ?? null,
+          coverage_pct: asNum(r.coverage_pct),
+          n_pillars_present: asNum(r.n_pillars_present),
+          pillars: {
+            traction: asNum(r.score_traction),
+            liveness: asNum(r.score_liveness),
+            identity: asNum(r.score_identity),
+          },
+          flags: {
+            has_onchain: asFlag(r.flag_has_onchain),
+            has_live: asFlag(r.flag_has_live),
+            has_well_known: asFlag(r.flag_has_well_known),
+            has_github: asFlag(r.flag_has_github),
+            has_x_handle: asFlag(r.flag_has_x_handle),
+            is_erc8004: asFlag(r.flag_is_erc8004),
+            active_30d: asFlag(r.flag_active_30d),
+          },
+        }
+      : null,
+    delivery: r.delivery_label
+      ? {
+          label: r.delivery_label,
+          tested_at: r.delivery_tested_at ?? null,
+          quality_grade: r.delivery_quality_grade ?? null,
+        }
+      : null,
+    as_of: r.as_of ?? null,
+    source: "agents-trust census (live ClickHouse mart)",
+  };
+}
+
 async function leaderboardRows(kv?: KVNamespace) {
   try {
     return await censusRows(kv);
@@ -116,6 +180,16 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     const domain = (c.req.query("domain") ?? "").toLowerCase().trim();
     if (!domain) throw new GatewayError("Missing ?domain=", 400, "bad_request");
 
+    // Rich path: one mart row (pillars, windows, flags, delivery test) via
+    // /q/trust_domain. Null → legacy leaderboard scan below, so this works
+    // regardless of which worker ships first.
+    const rich = await trustDomain(domain, kv);
+    if (rich.row) {
+      if (rich.stale) c.header("X-Roam-Census", "stale");
+      await record("/trust");
+      return c.json(richTrustPayload(domain, rich.row));
+    }
+
     const { rows, stale } = await leaderboardRows(kv);
     const row = rows.find((r) => (r.domain ?? "").toLowerCase() === domain);
     if (stale) c.header("X-Roam-Census", "stale");
@@ -146,11 +220,28 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     }
     const host = target.hostname.toLowerCase();
 
-    // Seller identity: census match by domain (exact or subdomain).
-    const { rows, stale } = await leaderboardRows(kv);
-    const row = rows.find(
-      (r) => (r.domain ?? "").toLowerCase() === host || host.endsWith(`.${(r.domain ?? "").toLowerCase()}`)
-    );
+    // Seller identity: rich mart row first (exact host, then apex), falling
+    // back to the leaderboard scan (exact or subdomain suffix).
+    let row: { domain?: string | null; trust_tier?: string | null; trust_score?: string | number | null; last_settlement_at?: string | null } | undefined;
+    let stale = false;
+    const lookups = [host];
+    const labels = host.split(".");
+    if (labels.length > 2) lookups.push(labels.slice(-2).join("."));
+    for (const d of lookups) {
+      const rich = await trustDomain(d, kv);
+      stale = stale || rich.stale;
+      if (rich.row) {
+        row = rich.row;
+        break;
+      }
+    }
+    if (!row) {
+      const scan = await leaderboardRows(kv);
+      stale = stale || scan.stale;
+      row = scan.rows.find(
+        (r) => (r.domain ?? "").toLowerCase() === host || host.endsWith(`.${(r.domain ?? "").toLowerCase()}`)
+      );
+    }
 
     // Catalog match: is this exact endpoint one we wrap? Then we can also
     // report its catalogued price, our route, and the last probe verdict.
@@ -177,7 +268,8 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
       seller_domain_match: row?.domain ?? null,
       known_seller: !!row,
       trust_tier: row?.trust_tier ?? "Unknown",
-      trust_score: row?.trust_score ?? null,
+      trust_score: asNum(row?.trust_score) ?? row?.trust_score ?? null,
+      last_settlement_at: row?.last_settlement_at ?? null,
       in_roam_catalog: !!catRoute,
       roam_route: catRoute ? `/r/${catRoute.slug}` : null,
       catalogued_price_usd: catRoute?.originPriceUsd ?? null,

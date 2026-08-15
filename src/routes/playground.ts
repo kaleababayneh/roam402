@@ -89,6 +89,7 @@ function page(cfg: Config): string {
   #summary.ok{display:block;color:var(--money);border-color:#c3f0dc;background:#ecfdf3}
   #summary.err{display:block;color:var(--err);border-color:#f3d1d1;background:#fef2f2}
   #summary.info{display:block;color:var(--body);background:var(--canvas)}
+  #summary a{color:inherit;font-weight:600;text-decoration:underline;margin-left:12px}
   #schemaState{font-size:11.5px;color:var(--muted);margin-top:10px}
 </style></head><body><div class="wrap">
 <h1>Playground</h1>
@@ -107,10 +108,11 @@ GoPlausible facilitator · <a href="/receipts">receipts</a> · ${catalog.routes.
   <label><span class="step">2</span>Inputs</label>
   <div id="schemaState">reading what this service expects…</div>
   <div id="params"></div>
-  <div id="bodyWrap" style="display:none" class="f">
-    <label for="body">JSON body <span class="opt">POST</span></label>
-    <textarea id="body">{}</textarea>
-    <div id="bodyHint" class="help"></div>
+  <div id="bodyWrap" style="display:none">
+    <div id="bodyForm"></div>
+    <div class="f" id="bodyRaw"><label for="body">JSON body <span class="opt">POST</span></label>
+    <textarea id="body">{}</textarea></div>
+    <div id="bodyHint" class="help" style="margin-top:6px"></div>
   </div>
   <div id="note"></div>
   <div class="row">
@@ -168,18 +170,73 @@ function fieldRow(param) {
   if (param.description) { const h = document.createElement("div"); h.className = "help"; h.textContent = param.description; f.append(h); }
   return f;
 }
-function queryParamsReveal(params) {
-  const reveal = document.createElement("button"); reveal.className = "ghost"; reveal.type = "button";
-  reveal.textContent = "+ add query parameters (rare)"; reveal.style.marginTop = "8px";
-  reveal.addEventListener("click", () => {
-    reveal.remove();
-    params.append(kvRow());
-    const add = document.createElement("button"); add.className = "ghost"; add.type = "button";
-    add.textContent = "+ add parameter"; add.style.marginTop = "8px";
-    add.addEventListener("click", () => params.insertBefore(kvRow(), add));
-    params.append(add);
-  });
-  return reveal;
+/* ── POST body → plain input fields (JSON assembled behind the scenes) ──── */
+let bodyFields = null;
+function renderBodyForm(exampleJson) {
+  bodyFields = null;
+  const host = $("bodyForm"); host.textContent = "";
+  let obj = null;
+  try { obj = JSON.parse(exampleJson); } catch { /* raw fallback */ }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || !Object.keys(obj).length) return false;
+  const fields = [];
+  for (const [key, val] of Object.entries(obj)) {
+    const f = document.createElement("div"); f.className = "f";
+    const lab = document.createElement("label");
+    if (Array.isArray(val) && val.length && val[0] && typeof val[0] === "object" && val[0] !== null && "content" in val[0]) {
+      lab.textContent = key.replace(/s$/, "");
+      const inp = document.createElement("input");
+      inp.setAttribute("placeholder", String(val[0].content ?? ""));
+      f.append(lab, inp);
+      fields.push({ kind: "chat", key, role: String(val[0].role ?? "user"), el: inp, example: String(val[0].content ?? "") });
+    } else if (val !== null && typeof val === "object") {
+      lab.textContent = key;
+      const ta = document.createElement("textarea");
+      ta.setAttribute("placeholder", JSON.stringify(val, null, 2)); ta.style.minHeight = "56px";
+      f.append(lab, ta);
+      fields.push({ kind: "json", key, el: ta, example: val });
+    } else if (typeof val === "boolean") {
+      lab.textContent = key;
+      const inp = document.createElement("input");
+      inp.setAttribute("placeholder", String(val));
+      f.append(lab, inp);
+      const h = document.createElement("div"); h.className = "help"; h.textContent = "true or false"; f.append(h);
+      fields.push({ kind: "bool", key, el: inp, example: val });
+    } else {
+      lab.textContent = key;
+      const inp = document.createElement("input");
+      inp.setAttribute("placeholder", String(val));
+      f.append(lab, inp);
+      fields.push({ kind: typeof val === "number" ? "number" : "string", key, el: inp, example: val });
+    }
+    host.append(f);
+  }
+  bodyFields = fields;
+  return true;
+}
+function buildBody() {
+  if (!bodyFields) return $("body").value;
+  const o = {};
+  for (const f of bodyFields) {
+    const v = f.el.value;
+    const empty = v.trim() === "";
+    if (f.kind === "chat") o[f.key] = [{ role: f.role, content: empty ? f.example : v }];
+    else if (f.kind === "json") {
+      if (empty) o[f.key] = f.example;
+      else {
+        try { o[f.key] = JSON.parse(v); }
+        catch { const e = new Error("The \u201C" + f.key + "\u201D field isn't valid JSON \u2014 fix it and try again."); throw e; }
+      }
+    } else if (f.kind === "number") { const n = Number(v); o[f.key] = empty ? f.example : Number.isFinite(n) ? n : v; }
+    else if (f.kind === "bool") o[f.key] = empty ? f.example : /^true$/i.test(v.trim());
+    else o[f.key] = empty ? f.example : v;
+  }
+  return JSON.stringify(o);
+}
+function initFor() {
+  if (selected().dataset.method !== "POST") return {};
+  let body;
+  try { body = buildBody(); } catch (e) { summary("err", e.message); return null; }
+  return { method: "POST", headers: { "Content-Type": "application/json" }, body };
 }
 function kvRow() {
   const row = document.createElement("div"); row.className = "kvrow";
@@ -198,27 +255,34 @@ async function loadSchema() {
   if (schemaAbort) schemaAbort.abort();
   const ctrl = new AbortController(); schemaAbort = ctrl;
   let sch = null;
+  let schErr = false;
   try {
     const res = await fetch("/schema?route=" + encodeURIComponent(route), { signal: ctrl.signal, cache: "no-store" });
     if (res.ok) sch = await res.json();
-  } catch { /* fall through to builder */ }
+    else schErr = true;
+  } catch (e) {
+    if (ctrl.signal.aborted) return;
+    schErr = true;
+  }
   if (ctrl.signal.aborted || selected()?.value !== route) return;
 
   if (sch && Array.isArray(sch.params) && sch.params.length) {
     $("schemaState").textContent =
       sch.source === "native" ? "" :
       sch.source === "origin-402" ? "inputs published by the service itself:" :
+      sch.source === "description" ? "inputs hinted by the route description:" :
       "inputs inferred from the service's validation:";
     for (const p of sch.params) params.append(fieldRow(p));
   } else if (o.dataset.method === "POST") {
-    $("schemaState").textContent = "This endpoint takes a JSON body — edit it below.";
-    params.append(queryParamsReveal(params));
+    $("schemaState").textContent = "";
   } else if (sch && (sch.source === "native" || Array.isArray(sch.params))) {
-    $("schemaState").textContent = "This route takes no inputs — just call it" +
-      (sch.source === "origin-402" ? " (the service declares none)." : ".");
-    params.append(queryParamsReveal(params));
+    $("schemaState").textContent = sch.bare
+      ? "No inputs needed — the service accepts a bare paid call (verified by a free probe)."
+      : "This route takes no inputs — just call it" + (sch.source === "origin-402" ? " (the service declares none)." : ".");
   } else {
-    $("schemaState").textContent = "This service doesn't publish parameter names — add what it needs as name/value pairs (its docs or description usually say).";
+    $("schemaState").textContent = schErr
+      ? "Couldn't reach the gateway to read this route's inputs — is the dev server still running? Re-select the route to retry, or add name/value pairs below."
+      : "This service doesn't publish parameter names — add what it needs as name/value pairs (its docs or description usually say).";
     params.append(kvRow());
     const add = document.createElement("button"); add.className = "ghost"; add.type = "button";
     add.textContent = "+ add parameter"; add.style.marginTop = "8px";
@@ -226,12 +290,17 @@ async function loadSchema() {
     params.append(add);
   }
   if (o.dataset.method === "POST") {
-    $("body").value = sch && sch.bodyExample ? sch.bodyExample : "{}";
-    $("bodyHint").textContent = sch && sch.bodySuggested
-      ? "Suggested starting body (the service publishes no example) — adjust as needed."
-      : "";
+    const example = sch && sch.bodyExample ? sch.bodyExample : "{}";
+    const built = renderBodyForm(example);
+    $("body").value = example;
+    $("bodyRaw").style.display = built ? "none" : "block";
+    $("bodyHint").textContent = built ? "" : "This service publishes no body shape — send raw JSON.";
+  } else {
+    bodyFields = null;
   }
-  if (sch && sch.note && sch.source !== "native") $("note").textContent = "service note: " + sch.note;
+  const noteUseful = sch && sch.note && sch.source !== "native" &&
+    (sch.source === "origin-402" || (!bodyFields && !(sch.params && sch.params.length)));
+  $("note").textContent = noteUseful ? "service note: " + sch.note : "";
   updatePayState();
 }
 
@@ -301,9 +370,27 @@ $("search").addEventListener("input", () => {
 $("route").addEventListener("change", () => { renderMeta(); loadSchema(); });
 
 /* ── result interpretation ───────────────────────────────────────────────── */
+function decodeReceipt(raw) {
+  if (!raw) return null;
+  try {
+    const b = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(b + "=".repeat((4 - (b.length % 4)) % 4));
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (ch) => ch.charCodeAt(0))));
+  } catch { return raw.slice(0, 80) + "\u2026"; }
+}
+function parseBody(text) {
+  try { return JSON.parse(text); } catch { return text.slice(0, 5000); }
+}
+function humanHint(hint) {
+  try {
+    const j = JSON.parse(hint);
+    const inner = j?.error?.message ?? j?.message ?? j?.error ?? hint;
+    return typeof inner === "string" ? inner : JSON.stringify(inner);
+  } catch { return hint; }
+}
 function explainFailure(status, bodyText) {
   let j = null; try { j = JSON.parse(bodyText); } catch { /* not json */ }
-  const hint = j && j.hint ? " The service said: \\u201C" + j.hint + "\\u201D." : "";
+  const hint = j && j.hint ? " The service said: \\u201C" + humanHint(j.hint) + "\\u201D." : "";
   const code = j && j.error;
   if (code === "origin_error") return "The origin rejected the call, so you were NOT charged." + hint + " Check the inputs above and try again.";
   if (code === "origin_timeout") return "The origin timed out — you were not charged. Usually transient; try again.";
@@ -316,10 +403,9 @@ function explainFailure(status, bodyText) {
 /* ── Tier 2: decode the live 402 challenge (free) ─────────────────────────── */
 $("inspect").addEventListener("click", async () => {
   summary("", "");
+  const init = initFor();
+  if (init === null) return;
   out("fetching unpaid → expecting 402…");
-  const init = selected().dataset.method === "POST"
-    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: $("body").value }
-    : {};
   const res = await fetch(routeUrl(), init);
   const pr = res.headers.get("PAYMENT-REQUIRED");
   if (res.status === 402 && pr) {
@@ -331,7 +417,7 @@ $("inspect").addEventListener("click", async () => {
   } else {
     const text = await res.text();
     if (res.status >= 400) summary("err", explainFailure(res.status, text));
-    out({ status: res.status, body: text.slice(0, 2000) });
+    out({ status: res.status, body: parseBody(text) });
   }
 });
 
@@ -346,7 +432,9 @@ $("connect").addEventListener("click", async () => {
       import("https://esm.sh/@x402/avm@2.19.0/exact/client?bundle&deps=algosdk@3.6.0"),
       import("https://esm.sh/@x402/fetch@2.19.0?bundle"),
     ]);
-    const pera = new PeraWalletConnect();
+    // Declare our network to Pera up front (416001 mainnet / 416002 testnet)
+    // so a wallet on the wrong network fails at connect, not at signing.
+    const pera = new PeraWalletConnect({ chainId: ${cfg.network === "mainnet" ? 416001 : 416002} });
     const accounts = await pera.connect().catch(async (e) => {
       if (String(e).includes("Session currently connected")) return pera.reconnectSession();
       throw e;
@@ -378,10 +466,14 @@ $("connect").addEventListener("click", async () => {
     $("wallet").textContent = address.slice(0, 10) + "…";
     walletReady = true;
     updatePayState();
-    summary("info", "Wallet connected. Fill any required inputs, then Pay & call — you approve the exact amount in Pera before anything moves.");
+    summary("info", "Wallet connected (Algorand ${cfg.network}). Fill the inputs, then Pay & call — you approve the exact amount in Pera before anything moves.");
     out("wallet connected: " + address);
   } catch (err) {
-    out("wallet error: " + (err?.message ?? err));
+    const msg = String(err?.message ?? err);
+    if (/network mismatch|different networks/i.test(msg)) {
+      summary("err", "Network mismatch: this gateway runs on Algorand ${cfg.network}, but your Pera app is on the other network. In Pera: Settings \u2192 Developer settings \u2192 Node settings \u2192 choose ${cfg.network === "mainnet" ? "Mainnet" : "Testnet"}, then reconnect.${cfg.network === "mainnet" ? "" : " (Production roam402.com runs mainnet \u2014 test real payments there.)"}");
+    }
+    out("wallet error: " + msg);
   }
 });
 
@@ -389,10 +481,9 @@ $("pay").addEventListener("click", async () => {
   if (!payingFetch) return;
   try {
     summary("", "");
+    const init = initFor();
+    if (init === null) return;
     out("paying " + selected().dataset.price + " + calling…");
-    const init = selected().dataset.method === "POST"
-      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: $("body").value }
-      : {};
     const res = await payingFetch(routeUrl(), init);
     const text = await res.text();
     if (res.status === 402) {
@@ -400,19 +491,35 @@ $("pay").addEventListener("click", async () => {
       out("details logged to the browser console.");
       return;
     }
-    const receipts = {
-      algorand: res.headers.get("PAYMENT-RESPONSE")?.slice(0, 60) ?? null,
-      origin: res.headers.get("X-Roam-Origin-Receipt")?.slice(0, 60) ?? null,
-      tier: res.headers.get("X-Roam-Trust-Tier"),
-    };
+    const alg = decodeReceipt(res.headers.get("PAYMENT-RESPONSE"));
+    const org = decodeReceipt(res.headers.get("X-Roam-Origin-Receipt"));
+    const tier = res.headers.get("X-Roam-Trust-Tier");
     if (res.ok) {
-      summary("ok", "\\u2713 " + res.status + " OK · paid " + selected().dataset.price + " · Algorand receipt " + (receipts.algorand ? "\\u2713" : "\\u2014") + " · origin receipt " + (receipts.origin ? "\\u2713" : "\\u2014"));
+      const sEl = $("summary"); sEl.className = "ok";
+      sEl.textContent = "\\u2713 " + res.status + " OK · paid " + selected().dataset.price + (tier ? " · tier " + tier : "");
+      const link = (href, label) => {
+        const a = document.createElement("a");
+        a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = label;
+        sEl.append(a);
+      };
+      if (alg && typeof alg === "object" && alg.transaction) {
+        link("${cfg.network === "mainnet" ? "https://allo.info/tx/" : "https://lora.algokit.io/testnet/transaction/"}" + alg.transaction, "Algorand receipt \\u2197");
+      }
+      if (org && typeof org === "object" && org.transaction) {
+        link((String(org.network ?? "").includes("84532") ? "https://sepolia.basescan.org/tx/" : "https://basescan.org/tx/") + org.transaction, "Base receipt \\u2197");
+      }
     } else {
       summary("err", explainFailure(res.status, text));
     }
-    out({ status: res.status, receipts, body: text.slice(0, 3000) });
+    out({ status: res.status, receipts: { algorand: alg, origin: org, tier }, body: parseBody(text) });
   } catch (err) {
-    out("payment error: " + (err?.message ?? err));
+    const msg = String(err?.message ?? err);
+    if (/network mismatch|different networks/i.test(msg)) {
+      summary("err", "Network mismatch: this gateway runs on Algorand ${cfg.network}, but your Pera app is on the other network. In Pera: Settings \u2192 Developer settings \u2192 Node settings \u2192 choose ${cfg.network === "mainnet" ? "Mainnet" : "Testnet"}, then reconnect.${cfg.network === "mainnet" ? "" : " (Production roam402.com runs mainnet \u2014 test real payments there.)"}");
+    } else {
+      summary("err", "Payment failed before completing \u2014 nothing was charged unless a receipt shows above.");
+    }
+    out("payment error: " + msg);
   }
 });
 
