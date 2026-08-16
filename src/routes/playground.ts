@@ -369,6 +369,38 @@ $("search").addEventListener("input", () => {
 });
 $("route").addEventListener("change", () => { renderMeta(); loadSchema(); });
 
+/* Deep link from the marketplace: /playground?route=<slug|/r/slug>.
+   The picker only holds a page of options, so a slug that isn't loaded yet is
+   fetched by name before selecting. */
+(async function preselect() {
+  const raw = new URLSearchParams(location.search).get("route");
+  if (!raw) return;
+  const path = raw.startsWith("/r/") ? raw : "/r/" + raw;
+  const sel = $("route");
+  const find = () => [...sel.options].find((o) => o.value === path);
+  if (!find()) {
+    try {
+      const res = await fetch("/catalog?q=" + encodeURIComponent(path.slice(3)) + "&limit=100");
+      const data = await res.json();
+      sel.textContent = "";
+      for (const w of data.wrapped ?? []) {
+        const o = document.createElement("option");
+        o.value = w.path;
+        o.dataset.method = w.method || "GET";
+        o.dataset.price = w.price || "";
+        o.dataset.service = w.service || "";
+        o.dataset.tier = w.trust_tier || "";
+        o.dataset.desc = (w.description || "").slice(0, 180);
+        o.textContent = w.path + " \\u00b7 " + (w.price || "") + " \\u00b7 " + (w.service || "");
+        sel.append(o);
+      }
+    } catch { /* fall through: leave the default list in place */ }
+  }
+  const hit = find();
+  if (hit) { sel.value = hit.value; $("search").value = path.slice(3); }
+  renderMeta(); loadSchema();
+})();
+
 /* ── result interpretation ───────────────────────────────────────────────── */
 function decodeReceipt(raw) {
   if (!raw) return null;

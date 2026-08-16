@@ -24,6 +24,7 @@ import { mountNativeRoutes } from "./routes/native";
 import { mountFreeRoutes } from "./routes/free";
 import { mountSchema } from "./routes/schema";
 import { mountLanding } from "./routes/landing";
+import { mountMarketplace } from "./routes/marketplace";
 import { mountReceipts } from "./routes/receipts";
 import { mountStats } from "./routes/stats";
 import { mountPlayground } from "./routes/playground";
@@ -70,6 +71,7 @@ async function buildRuntime(env: Env): Promise<Runtime> {
   });
 
   mountLanding(app, cfg, env.RECEIPTS);
+  mountMarketplace(app, cfg);
   mountPlayground(app, cfg);
   mountStats(app);
   mountReceipts(app, receipts);

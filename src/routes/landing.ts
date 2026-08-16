@@ -231,7 +231,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
       <div class="hidden lg:flex items-center gap-4">
         <ul class="flex items-center gap-8">
           <li class="text-sm font-medium link"><a href="/#how">How it works</a></li>
-          <li class="text-sm font-medium link"><a href="/catalog">Catalog</a></li>
+          <li class="text-sm font-medium link"><a href="/marketplace">Marketplace</a></li>
           <li class="text-sm font-medium link"><a href="/receipts">Receipts</a></li>
           <li class="text-sm font-medium link"><a href="/llms.txt">Agent spec</a></li>
         </ul>
@@ -247,7 +247,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 </header>
 <div id="m-menu" class="rx-menu lg:hidden">
   <a href="/#how">How it works</a>
-  <a href="/catalog">Catalog</a>
+  <a href="/marketplace">Marketplace</a>
   <a href="/playground">Playground</a>
   <a href="/receipts">Receipts</a>
   <a href="/llms.txt">Agent spec</a>
