@@ -271,17 +271,18 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 
           <!-- live census preview (real data, not a mock) -->
           <div class="w-full h-full relative reveal" style="--rd:.3s">
-            <a class="rx-lift" href="https://agents-trust.com" aria-label="Open the Agents-Trust census">
+            <a class="rx-lift" href="https://agents-trust.ai" aria-label="Open the Agents-Trust census">
               <div class="relative rounded-xl lg:rounded-[32px] border border-border p-2 backdrop-blur-lg mt-10 max-w-6xl mx-auto">
                 <div class="absolute top-1/8 left-1/2 -z-10 bg-gradient-to-r from-sky-500 to-blue-600 w-1/2 lg:w-3/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[4rem] lg:blur-[10rem] animate-image-glow"></div>
                 <div class="hidden lg:block absolute -top-1/8 left-1/2 -z-20 bg-blue-600 w-1/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[10rem] animate-image-glow"></div>
-                <div class="rounded-lg lg:rounded-[22px] border border-border rx-inner">
+                <div class="rounded-lg lg:rounded-[22px] border border-border rx-inner rx-live-frame">
                   <img alt="The live Agents-Trust census of x402 settlement that powers the Roam402 catalog" loading="lazy" width="1920" height="1080" decoding="async" class="rounded-lg lg:rounded-[20px]" style="color:transparent" src="/images/dashboard.png"/>
+                  <iframe src="https://agents-trust.ai/" title="Live Agents-Trust census" loading="lazy" tabindex="-1" aria-hidden="true" scrolling="no" referrerpolicy="no-referrer"></iframe>
                 </div>
               </div>
               <div class="bg-gradient-to-t from-background to-transparent absolute bottom-0 inset-x-0 w-full h-1/2"></div>
             </a>
-            <p class="text-sm text-muted-foreground mt-4 text-center relative z-20">Live data: the <a class="rx-accent" href="https://agents-trust.com">Agents-Trust census</a> this catalog is built from</p>
+            <p class="text-sm text-muted-foreground mt-4 text-center relative z-20">Live data: the <a class="rx-accent" href="https://agents-trust.ai">Agents-Trust census</a> this catalog is built from</p>
           </div>
         </div>
       </div>
@@ -449,7 +450,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
     <a class="link" href="/.well-known/agents.json">agents.json</a>
     <a class="link rx-status" href="/healthz"><span class="d" id="st-dot"></span>Status</a>
   </div>
-  <p class="text-sm text-muted-foreground md:mt-0 text-center">© 2026 Roam402 · built by <a class="rx-accent" href="https://agents-trust.com">Agents-Trust</a></p>
+  <p class="text-sm text-muted-foreground md:mt-0 text-center">© 2026 Roam402 · built by <a class="rx-accent" href="https://agents-trust.ai">Agents-Trust</a></p>
 </footer>
 
 <script>
@@ -511,7 +512,7 @@ endpoints, one merchant address, dual-chain receipts.
 - GET /trust?domain={domain} — Agents-Trust tier + score for any x402 seller
 - GET /precheck?url={url} — safety check before paying an unknown endpoint
 
-Operated by Agents-Trust (https://agents-trust.com) — the observatory
+Operated by Agents-Trust (https://agents-trust.ai) — the observatory
 indexing $45M+ of real x402 settlement.
 `;
 
@@ -523,7 +524,7 @@ export function mountLanding(app: Hono<AppEnv>, cfg: Config, kv?: KVNamespace): 
       name: "Roam402",
       description:
         "x402 roaming gateway — the verified x402 economy payable in USDC on Algorand, with dual-chain receipts.",
-      operator: { name: "Agents-Trust", url: "https://agents-trust.com" },
+      operator: { name: "Agents-Trust", url: "https://agents-trust.ai" },
       payment: {
         protocol: "x402",
         network: cfg.chain.caip2,

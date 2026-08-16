@@ -18,7 +18,7 @@ import { openTripCount } from "../fulfillment/breaker";
 export function catalogPayload(cfg: Config): Record<string, unknown> {
   return {
     name: "Roam402 | the x402 roaming gateway",
-    by: "agents-trust.com",
+    by: "agents-trust.ai",
     network: cfg.chain.caip2,
     asset: `USDC (ASA ${cfg.chain.usdcAsaId})`,
     how: "GET any route below without payment to receive an x402 402 challenge; retry with X-PAYMENT via the GoPlausible facilitator.",

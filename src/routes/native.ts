@@ -206,7 +206,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
       verified_volume_usd_total: row.verified_volume_usd_total ?? null,
       verified_tx_total: row.verified_tx_total ?? null,
       first_settlement_at: row.first_settlement_at ?? null,
-      source: "agents-trust.com census",
+      source: "agents-trust.ai census",
     });
   });
 
@@ -277,7 +277,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
         ? { status: health.status, checked_at: health.at }
         : { status: "unprobed", checked_at: null },
       verdict,
-      source: "agents-trust.com census + roam402 catalog probes",
+      source: "agents-trust.ai census + roam402 catalog probes",
     });
   });
 }
