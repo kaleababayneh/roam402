@@ -12,7 +12,7 @@ import { declareDiscoveryExtension } from "@x402/extensions";
 import type { RouteConfig } from "@x402/core/server";
 import type { Config } from "../config";
 import { GatewayError } from "../lib/errors";
-import { catalogPayload } from "./free";
+import { catalogPayload, queryFromRequest } from "./free";
 import type { ReceiptStore } from "../receipts/store";
 import { censusRows, trustDomain, type TrustDomainRow } from "../lib/census";
 import { catalog } from "../catalog";
@@ -173,7 +173,9 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
 
   app.get("/discover", async (c) => {
     await record("/discover");
-    return c.json(catalogPayload(cfg));
+    // Same paging contract as free /catalog: a buyer paying for discovery must
+    // not receive ~250k tokens of route table by default.
+    return c.json(catalogPayload(cfg, queryFromRequest(c.req)));
   });
 
   app.get("/trust", async (c) => {

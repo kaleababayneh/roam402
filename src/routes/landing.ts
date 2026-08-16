@@ -287,8 +287,8 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 
           <div class="w-full h-full z-20 reveal" style="--rd:.24s">
             <div class="flex items-center justify-center mt-6 gap-x-4">
-              <a class="flex items-center gap-2 group" href="/catalog">
-                <button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Explore catalog${ARROW_RIGHT}</button>
+              <a class="flex items-center gap-2 group" href="/marketplace">
+                <button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Browse the marketplace${ARROW_RIGHT}</button>
               </a>
               <a class="flex items-center gap-2 group" href="/playground">
                 <button class="${BTN} border border-input hover:bg-white/10 hover:text-accent-foreground h-10 px-8">Try playground</button>
@@ -457,7 +457,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
           <h2 class="text-3xl md:text-5xl lg:text-6xl font-heading font-medium !leading-snug">Ready to let your <br/>agents <span class="font-subheading italic">roam</span>?</h2>
           <p class="text-sm md:text-lg text-center text-accent-foreground/80 max-w-2xl mx-auto mt-4">Point any x402 client at the gateway. ${n} verified services, one USDC rail on Algorand, receipts from two chains.</p>
           <div class="flex items-center justify-center mt-8 gap-x-4">
-            <a href="/catalog"><button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Explore catalog</button></a>
+            <a href="/marketplace"><button class="${BTN} bg-primary text-primary-foreground hover:opacity-70 hover:ring-4 hover:ring-primary/10 h-10 px-8">Browse the marketplace</button></a>
             <a href="/llms.txt"><button class="${BTN} border border-input hover:bg-white/10 hover:text-accent-foreground h-10 px-8">Read agent spec</button></a>
           </div>
           <div class="rx-tags">
@@ -476,7 +476,8 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 <!-- ── Footer ─────────────────────────────────────────────────────────── -->
 <footer class="footer flex flex-col relative items-center justify-center border-t border-foreground/5 pb-8 px-6 lg:px-8 w-full max-w-6xl mx-auto lg:pt-12 pt-8 gap-4">
   <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-muted-foreground">
-    <a class="link" href="/catalog">Catalog</a>
+    <a class="link" href="/marketplace">Marketplace</a>
+    <a class="link" href="/catalog">Catalog JSON</a>
     <a class="link" href="/playground">Playground</a>
     <a class="link" href="/receipts">Receipts</a>
     <a class="link" href="/llms.txt">llms.txt</a>
@@ -539,7 +540,11 @@ Algorand (facilitator: GoPlausible). ${n} wrapped routes + native trust
 endpoints, one merchant address, dual-chain receipts.
 
 ## For agents
-- GET /catalog — free machine-readable catalog (routes, prices, trust tiers)
+- GET /catalog — free machine-readable catalog (routes, prices, trust tiers).
+  PAGED: 25 routes per call with total + next. NARROW FIRST with
+  ?q= ?category= ?service= ?tier= ?method= ?max_price= rather than paging
+  through everything; stats.byCategory summarises the whole catalog in one
+  call. ?limit=all returns all ${n} routes (~1MB — it will fill your context).
 - Any route: request without payment → HTTP 402 challenge (x402 v2,
   PAYMENT-REQUIRED header) → retry with X-PAYMENT.
 - GET /trust?domain={domain} — Agents-Trust tier + score for any x402 seller

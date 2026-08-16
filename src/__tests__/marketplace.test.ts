@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { SYNONYMS, endpointName, routeLabel } from "../routes/marketplace";
+import { SYNONYMS } from "../routes/marketplace";
+import { endpointName, routeLabel } from "../lib/routeText";
 import { catalog } from "../catalog";
 
 /**
