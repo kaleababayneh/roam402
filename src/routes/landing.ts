@@ -22,8 +22,13 @@ import type { AppEnv } from "../lib/appEnv";
 import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
+import { BASE_CAIP2, BASE_SEPOLIA_CAIP2 } from "../fulfillment/origin";
 import { usdString } from "../pricing";
 import { censusRows } from "../lib/census";
+
+/** Public origin used in copy when the worker is served from a dev host. */
+const CANONICAL_ORIGIN = "https://roam402.com";
+const LOOPBACK = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i;
 
 /* ── inline SVG marks (simple-icons paths; Base mark from base.org brand) ── */
 
@@ -35,15 +40,31 @@ const MARK_ETHEREUM = `<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http:
 
 const MARK_BASE = `<svg viewBox="0 0 111 111" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z"/></svg>`;
 
-const ICON_USDC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><path d="M16 8.6h-5.2a2.1 2.1 0 1 0 0 4.2h2.4a2.1 2.1 0 1 1 0 4.2H8"/><path d="M12 5.6v2.2m0 8.4v2.2"/></svg>`;
+/* USDC coin mark (Circle brand blue) — the asset every route settles in, so
+   it is the one orbit mark that keeps its own colour instead of currentColor. */
+const ICON_USDC = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#2775CA"/><g fill="#fff"><path d="M20.022 18.124c0-2.124-1.28-2.852-3.84-3.156-1.828-.243-2.193-.728-2.193-1.578 0-.85.61-1.396 1.828-1.396 1.097 0 1.707.364 2.011 1.275a.458.458 0 00.427.303h.975a.416.416 0 00.427-.425v-.06a3.04 3.04 0 00-2.743-2.489V9.142c0-.243-.183-.425-.487-.486h-.915c-.243 0-.426.182-.487.486v1.396c-1.829.242-2.986 1.456-2.986 2.974 0 2.002 1.218 2.791 3.778 3.095 1.707.303 2.255.668 2.255 1.639 0 .97-.853 1.638-2.011 1.638-1.585 0-2.133-.667-2.316-1.578-.06-.242-.244-.364-.427-.364h-1.036a.416.416 0 00-.426.425v.06c.243 1.518 1.219 2.61 3.23 2.914v1.457c0 .242.183.425.487.485h.915c.243 0 .426-.182.487-.485V21.34c1.829-.303 3.047-1.578 3.047-3.217z"/><path d="M12.892 24.497c-4.754-1.7-7.192-6.98-5.424-11.653.914-2.55 2.925-4.491 5.424-5.402.244-.121.365-.303.365-.607v-.85c0-.242-.121-.424-.365-.485-.061 0-.183 0-.244.06a10.895 10.895 0 00-7.13 13.717c1.096 3.4 3.717 6.01 7.13 7.102.244.121.488 0 .548-.243.061-.06.061-.122.061-.243v-.85c0-.182-.182-.424-.365-.546zm6.46-18.936c-.244-.122-.488 0-.548.242-.061.061-.061.122-.061.243v.85c0 .243.182.485.365.607 4.754 1.7 7.192 6.98 5.424 11.653-.914 2.55-2.925 4.491-5.424 5.402-.244.121-.365.303-.365.607v.85c0 .242.121.424.365.485.061 0 .183 0 .244-.06a10.895 10.895 0 007.13-13.717c-1.096-3.46-3.778-6.07-7.13-7.162z"/></g></svg>`;
 
 const ARROW_RIGHT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 group-hover:translate-x-1 transition-all duration-300"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
 
 /* buttons share the template's compiled utility recipe */
-/** Live "settlement indexed" figure from the census, memoized 6h per
- * isolate with a hard latency guard so the landing never waits on upstream. */
+
+/** Compact USD for headline figures ($45.0M / $820K / $940). */
+function usdCompact(total: number): string {
+  if (total >= 1_000_000) return `$${(total / 1_000_000).toFixed(1)}M`;
+  if (total >= 1_000) return `$${Math.round(total / 1_000)}K`;
+  return `$${Math.round(total)}`;
+}
+
+/**
+ * Live "settlement indexed" figure from the census, memoized 6h per isolate
+ * with a hard latency guard so the landing never waits on upstream.
+ *
+ * Returns null when the census is unreachable — every caller then OMITS the
+ * figure rather than printing a stale literal. A number on this page must
+ * always be one we just measured.
+ */
 let statCache: { v: string; at: number } | null = null;
-async function settlementIndexed(kv?: KVNamespace): Promise<string> {
+async function settlementIndexed(kv?: KVNamespace): Promise<string | null> {
   if (statCache && Date.now() - statCache.at < 6 * 3_600_000) return statCache.v;
   try {
     const race = censusRows(kv);
@@ -53,14 +74,14 @@ async function settlementIndexed(kv?: KVNamespace): Promise<string> {
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("census_slow")), 1500)),
     ]);
     const total = rows.reduce((sum, r) => sum + (Number(r.verified_volume_usd_total) || 0), 0);
-    if (total > 1_000_000) {
-      statCache = { v: `$${(total / 1_000_000).toFixed(1)}M`, at: Date.now() };
+    if (total > 0) {
+      statCache = { v: usdCompact(total), at: Date.now() };
       return statCache.v;
     }
   } catch {
-    /* cold isolate or slow upstream: fall through to the static claim */
+    /* cold isolate or slow upstream — caller drops the stat this render */
   }
-  return "$45M+";
+  return null;
 }
 
 const BTN = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium hover:-translate-y-0.5 transition-all duration-300`;
@@ -115,7 +136,7 @@ function orbitRings(): string {
 
   return `${ring(300)}
         ${orb(300, 40, 0, mark(MARK_ALGORAND, "size-5", "text-foreground/80"))}
-        ${orb(300, 40, 180, mark(ICON_USDC, "size-5", "text-foreground/60"))}
+        ${orb(300, 40, 180, mark(ICON_USDC, "size-5", "opacity-80"))}
         ${ring(400)}
         ${orb(400, 80, 0, mark(MARK_BASE, "size-4", "text-foreground/70"))}
         ${orb(400, 80, 120, mark(MARK_SOLANA, "size-4", "text-foreground/70"))}
@@ -137,13 +158,25 @@ const LUCIDE = {
   trend: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
 };
 
-function page(cfg: Config, settled: string): string {
+function page(cfg: Config, settled: string | null): string {
   const n = catalog.routes.length;
   const services = new Set(catalog.routes.map((r) => r.service)).size;
   const base = cfg.publicBaseUrl || "";
-  const gatewayHost = base || "https://roam402.com";
+  // Copy on this page is documentation a reader copy-pastes, so it always
+  // shows the deployed origin — never the loopback host of a dev session.
+  const gatewayHost = base && !LOOPBACK.test(base) ? base : CANONICAL_ORIGIN;
+  // Chains one receipt spans: this gateway's settlement chain (config) plus
+  // the origin's home chain we pay on (fulfillment). Counted from the real
+  // CAIP-2 ids so the stat can't drift from what we actually emit.
+  const receiptChains = new Set([
+    cfg.chain.caip2,
+    cfg.network === "mainnet" ? BASE_CAIP2 : BASE_SEPOLIA_CAIP2,
+  ]).size;
+  // Cheapest native endpoint, straight from the price table.
+  const nativeFloor = usdString(Math.min(...NATIVE_ROUTES.map((r) => r.priceUsd)));
+  const censusClaim = settled ? `${settled} in settlement` : "real on-chain settlement";
   const title = "Roam402 | Every x402 service, payable on Algorand";
-  const desc = `Roam402 is the x402 roaming gateway for AI agents: ${n} verified services from the $45M+ x402 economy, payable in USDC on Algorand via the GoPlausible facilitator, fulfilled cross-chain with dual receipts. By Agents-Trust.`;
+  const desc = `Roam402 is the x402 roaming gateway for AI agents: ${n} verified services from the ${settled ? `${settled} ` : ""}x402 economy, payable in USDC on Algorand via the GoPlausible facilitator, fulfilled cross-chain with dual receipts. By Agents-Trust.`;
 
   return `<!doctype html>
 <html lang="en">
@@ -264,20 +297,20 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
             <div class="rx-statline">
               <span><b>${n}</b>wrapped routes</span>
               <span><b>${services}</b>verified services</span>
-              <span><b class="rx-money">${settled}</b>settlement indexed</span>
-              <span><b>2</b>chains per receipt</span>
+              ${settled ? `<span><b class="rx-money">${settled}</b>settlement indexed</span>` : ""}
+              <span><b>${receiptChains}</b>chains per receipt</span>
             </div>
           </div>
 
           <!-- live census preview (real data, not a mock) -->
-          <div class="w-full h-full relative reveal" style="--rd:.3s">
+          <div class="w-full h-full relative reveal rx-preview-wrap" style="--rd:.3s">
             <a class="rx-lift" href="https://agents-trust.ai" aria-label="Open the Agents-Trust census">
               <div class="relative rounded-xl lg:rounded-[32px] border border-border p-2 backdrop-blur-lg mt-10 max-w-6xl mx-auto">
                 <div class="absolute top-1/8 left-1/2 -z-10 bg-gradient-to-r from-sky-500 to-blue-600 w-1/2 lg:w-3/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[4rem] lg:blur-[10rem] animate-image-glow"></div>
                 <div class="hidden lg:block absolute -top-1/8 left-1/2 -z-20 bg-blue-600 w-1/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[10rem] animate-image-glow"></div>
                 <div class="rounded-lg lg:rounded-[22px] border border-border rx-inner rx-live-frame">
-                  <img alt="The live Agents-Trust census of x402 settlement that powers the Roam402 catalog" loading="lazy" width="1920" height="1080" decoding="async" class="rounded-lg lg:rounded-[20px]" style="color:transparent" src="/images/dashboard.png"/>
-                  <iframe src="https://agents-trust.ai/?sort=verified_volume_usd_total&amp;dir=desc" title="Live Agents-Trust census" loading="lazy" tabindex="-1" aria-hidden="true" scrolling="no" referrerpolicy="no-referrer"></iframe>
+                  <img alt="The live Agents-Trust census of x402 settlement that powers the Roam402 catalog" loading="eager" fetchpriority="high" width="1920" height="1080" decoding="async" class="rounded-lg lg:rounded-[20px]" style="color:transparent" src="/images/dashboard.png"/>
+                  <iframe src="https://agents-trust.ai/" title="Live Agents-Trust census" loading="lazy" tabindex="-1" aria-hidden="true" scrolling="no" referrerpolicy="no-referrer"></iframe>
                 </div>
               </div>
               <div class="bg-gradient-to-t from-background to-transparent absolute bottom-0 inset-x-0 w-full h-1/2"></div>
@@ -329,7 +362,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
       </div>
 
       <div class="w-full max-w-6xl mx-auto rx-caps reveal" style="--rd:.15s">
-        <div class="rx-cap">${LUCIDE.chart}<div><b>Census-vetted catalog</b><p>Tiers, prices, and liveness come from the Agents-Trust census of $45M+ in settlement, not a directory scrape.</p></div></div>
+        <div class="rx-cap">${LUCIDE.chart}<div><b>Census-vetted catalog</b><p>Tiers, prices, and liveness come from the Agents-Trust census of ${censusClaim}, not a directory scrape.</p></div></div>
         <div class="rx-cap">${LUCIDE.shield}<div><b>Precheck before paying</b><p>/precheck and /trust vet seller identity, tier, and liveness before any funds move.</p></div></div>
         <div class="rx-cap">${LUCIDE.wallet}<div><b>One merchant payTo</b><p>All ${n} routes settle to a single Algorand address, so treasury audit stays trivial.</p></div></div>
       </div>
@@ -389,7 +422,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
                   <div class="space-y-4">
                     <div class="flex justify-between items-baseline">
                       <div>
-                        <div class="text-3xl font-semibold rx-mono">$0.0002+</div>
+                        <div class="text-3xl font-semibold rx-mono">${nativeFloor}+</div>
                         <div class="text-sm text-green-500 flex items-center gap-1 mt-2">${LUCIDE.trend}micro-priced trust intelligence</div>
                       </div>
                     </div>
@@ -499,7 +532,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 </html>`;
 }
 
-const LLMS_TXT = (n: number) => `# Roam402 | the x402 roaming gateway
+const LLMS_TXT = (n: number, settled: string | null) => `# Roam402 | the x402 roaming gateway
 
 Every verified x402 service from the Base/Solana economy, payable in USDC on
 Algorand (facilitator: GoPlausible). ${n} wrapped routes + native trust
@@ -513,12 +546,14 @@ endpoints, one merchant address, dual-chain receipts.
 - GET /precheck?url={url} — safety check before paying an unknown endpoint
 
 Operated by Agents-Trust (https://agents-trust.ai) — the observatory
-indexing $45M+ of real x402 settlement.
+indexing ${settled ? `${settled} of ` : ""}real x402 settlement.
 `;
 
 export function mountLanding(app: Hono<AppEnv>, cfg: Config, kv?: KVNamespace): void {
   app.get("/", async (c) => c.html(page(cfg, await settlementIndexed(kv))));
-  app.get("/llms.txt", (c) => c.text(LLMS_TXT(catalog.routes.length)));
+  app.get("/llms.txt", async (c) =>
+    c.text(LLMS_TXT(catalog.routes.length, await settlementIndexed(kv)))
+  );
   app.get("/.well-known/agents.json", (c) =>
     c.json({
       name: "Roam402",

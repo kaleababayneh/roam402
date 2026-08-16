@@ -3483,10 +3483,15 @@ html{scroll-behavior:smooth}
 .rx-inner{background:#ffffff}
 /* live census preview: real agents-trust.ai in a scaled iframe, screenshot
    underneath as the paint-in placeholder; pointer-events off so the whole
-   card stays one click-through link */
-.rx-live-frame{position:relative;aspect-ratio:16/9;overflow:hidden}
-.rx-live-frame>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.rx-live-frame>iframe{position:absolute;top:0;left:0;width:200%;height:200%;transform:scale(.5);transform-origin:0 0;border:0;pointer-events:none;background:#020617}
+   card stays one click-through link.
+   The wrapper breaks out of the centered hero column (which is only as wide
+   as the h1) so the frame gets real width; scale(.8) over a 125% viewport
+   keeps the embed on agents-trust.ai's DESKTOP breakpoint while rendering
+   text at 80% of natural size — legible, unlike the 50% it was. */
+.rx-preview-wrap{width:min(1180px,94vw)}
+.rx-live-frame{position:relative;aspect-ratio:16/10;overflow:hidden}
+.rx-live-frame>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}
+.rx-live-frame>iframe{position:absolute;top:0;left:0;width:125%;height:125%;transform:scale(.8);transform-origin:0 0;border:0;pointer-events:none;background:#f8fafc}
 .rx-pill{position:relative;display:inline-flex;border-radius:9999px;padding:1px;overflow:hidden;isolation:isolate}
 .rx-pill::before{content:"";position:absolute;inset:-150%;z-index:-1;background:conic-gradient(from 0deg,#e2e5ee 0 290deg,rgba(99,102,241,.85) 335deg,#4f46e5 360deg);animation:spin 4.5s linear infinite}
 .rx-pill-inner{display:flex;align-items:center;gap:8px;border-radius:9999px;background:#ffffff;padding:5px 14px;font-size:13px;color:#3b3f52}
