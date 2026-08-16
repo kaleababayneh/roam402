@@ -11,7 +11,7 @@ import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
-import { routeLabel } from "../lib/routeText";
+import { routeLabel, searchText } from "../lib/routeText";
 import { getHealthSummary } from "../fulfillment/health";
 import { openTripCount } from "../fulfillment/breaker";
 
@@ -67,6 +67,14 @@ function allRows(): CatalogRow[] {
   }));
 }
 
+/** path → lowercase match text, built once per isolate. */
+const searchIndex = new Map<string, string>(
+  catalog.routes.map((r) => [
+    `/r/${r.slug}`,
+    `/r/${r.slug} ${r.service} ${r.category ?? "other"} ${searchText(r.description ?? "", r.slug)}`.toLowerCase(),
+  ])
+);
+
 /** Aggregates over the FULL catalog — they never depend on the page returned. */
 function fullStats() {
   const byCategory: Record<string, { services: number; routes: number }> = {};
@@ -97,8 +105,9 @@ export function catalogPayload(cfg: Config, query: CatalogQuery = {}): Record<st
   const filtered = !!(q || category || service || tier || method || maxPrice != null);
   if (filtered) {
     rows = rows.filter((w) => {
-      if (q && !`${w.path} ${w.service} ${w.description} ${w.category}`.toLowerCase().includes(q))
-        return false;
+      // Match on everything we know the route by, not just what we display —
+      // see searchText() for why the census wording still earns its keep.
+      if (q && !searchIndex.get(w.path)!.includes(q)) return false;
       if (category && !w.category.toLowerCase().includes(category)) return false;
       if (service && !w.service.toLowerCase().includes(service)) return false;
       if (tier && w.trust_tier.toLowerCase() !== tier) return false;

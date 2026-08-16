@@ -22,6 +22,7 @@ import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
+import { routeLabel } from "../lib/routeText";
 
 /** Picker cap for the server-rendered initial list; search covers the rest. */
 const PICKER_MAX = 150;
@@ -38,7 +39,9 @@ function options(): string {
   const wrapped = catalog.routes
     .slice(0, PICKER_MAX)
     .map((r) =>
-      optionTag(`/r/${r.slug}`, r.method, usdString(r.roamPriceUsd), r.service, r.tier, r.description, `/r/${r.slug} · ${usdString(r.roamPriceUsd)} · ${r.service}`)
+      // routeLabel: the origin's own description of the endpoint when it
+      // publishes one, so the picker matches what /catalog and /marketplace say.
+      optionTag(`/r/${r.slug}`, r.method, usdString(r.roamPriceUsd), r.service, r.tier, routeLabel(r.description, r.slug), `/r/${r.slug} · ${usdString(r.roamPriceUsd)} · ${r.service}`)
     );
   return [...native, ...wrapped].join("\n");
 }

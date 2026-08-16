@@ -9,6 +9,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json",
     "catalog:generate": "tsx scripts/generate-catalog.ts",
+    "catalog:enrich": "tsx scripts/enrich-catalog.ts",
     "account:new": "tsx scripts/new-account.ts",
     "smoke": "tsx scripts/smoke-client.ts",
     "optin": "tsx scripts/optin.ts",
