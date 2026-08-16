@@ -277,7 +277,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
                 <div class="hidden lg:block absolute -top-1/8 left-1/2 -z-20 bg-blue-600 w-1/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[10rem] animate-image-glow"></div>
                 <div class="rounded-lg lg:rounded-[22px] border border-border rx-inner rx-live-frame">
                   <img alt="The live Agents-Trust census of x402 settlement that powers the Roam402 catalog" loading="lazy" width="1920" height="1080" decoding="async" class="rounded-lg lg:rounded-[20px]" style="color:transparent" src="/images/dashboard.png"/>
-                  <iframe src="https://agents-trust.ai/" title="Live Agents-Trust census" loading="lazy" tabindex="-1" aria-hidden="true" scrolling="no" referrerpolicy="no-referrer"></iframe>
+                  <iframe src="https://agents-trust.ai/?sort=verified_volume_usd_total&amp;dir=desc" title="Live Agents-Trust census" loading="lazy" tabindex="-1" aria-hidden="true" scrolling="no" referrerpolicy="no-referrer"></iframe>
                 </div>
               </div>
               <div class="bg-gradient-to-t from-background to-transparent absolute bottom-0 inset-x-0 w-full h-1/2"></div>
