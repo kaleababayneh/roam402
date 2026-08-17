@@ -22,6 +22,11 @@ config block, no code.
 
 | Tool | Cost | What it does |
 |---|---|---|
+**No wallet yet?** Run `npx roam402-mcp` in a terminal — it walks you through
+creating one and prints the config to paste into your agent host. Without a
+wallet the server still starts read-only: `roam_catalog` and `roam_schema`
+work, and the paid tools tell you what is missing.
+
 | `roam_resolve` | $0.0005 | Describe what you need in plain English → a ranked shortlist of routes. Suggests only; never calls or pays for them |
 | `roam_catalog` | free | Browse every callable service: routes, USDC prices, trust tiers. Paged — filter by search/category/service/tier/method/max_price |
 | `roam_schema` | free | What inputs a route expects, probed from the origin's own x402 challenge — call before `roam_call` |

@@ -34,8 +34,15 @@ const DEFAULT_GATEWAY: Record<RoamNetwork, string> = {
 };
 
 export interface RoamClientOptions {
-  /** Algorand signer (wallet adapter or from signerFromMnemonic()). */
-  signer: ClientAvmSigner;
+  /**
+   * Algorand signer (wallet adapter or from signerFromMnemonic()).
+   *
+   * OPTIONAL: omit it for a read-only client. The free endpoints (catalog,
+   * schema) work exactly the same; paid ones throw a clear "no wallet
+   * configured" error instead of failing at the payment step. Discovery
+   * should never require a wallet.
+   */
+  signer?: ClientAvmSigner;
   network?: RoamNetwork;
   /** Override the gateway base URL (e.g. staging). */
   gatewayUrl?: string;
@@ -191,8 +198,14 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
   const network = opts.network ?? "mainnet";
   const base = (opts.gatewayUrl ?? DEFAULT_GATEWAY[network]).replace(/\/$/, "");
 
-  const client = new x402Client().register(CAIP2[network], new ExactAvmScheme(opts.signer));
-  const payingFetch = wrapFetchWithPayment(fetch, client) as typeof fetch;
+  // No signer → plain fetch. Every 402 then surfaces through explain() as a
+  // configuration message rather than a mystery.
+  const payingFetch: typeof fetch = opts.signer
+    ? (wrapFetchWithPayment(
+        fetch,
+        new x402Client().register(CAIP2[network], new ExactAvmScheme(opts.signer))
+      ) as typeof fetch)
+    : fetch;
 
   /**
    * A 402 that survives the paying fetch means the payment never completed —
@@ -203,6 +216,13 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
   const explain = async (res: Response, path: string): Promise<Error> => {
     const body = (await res.text().catch(() => "")).slice(0, 300);
     if (res.status === 402) {
+      if (!opts.signer) {
+        return new Error(
+          `roam402 ${path} → this is a paid endpoint and no wallet is configured. ` +
+            `Create the client with a signer (see signerFromMnemonic) to pay for it. ` +
+            `Nothing was charged.`
+        );
+      }
       return new Error(
         `roam402 ${path} → payment required but NOT completed. The wallet could not ` +
           `pay: check it holds USDC and ALGO for fees and is opted into the USDC asset ` +

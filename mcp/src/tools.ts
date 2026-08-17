@@ -45,7 +45,21 @@ function receiptLines(res: Response): string {
   return parts.length ? `\n\n— receipts —\n${parts.join("\n")}` : "";
 }
 
-export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfig, address: string): void {
+/** Shown by every paid tool when the server is running without a wallet. */
+const NO_WALLET =
+  "No wallet is configured, so paid tools are unavailable — nothing was charged. " +
+  "Set ROAM_MNEMONIC (25-word Algorand mnemonic) in this MCP server's env config, " +
+  "or run `npx roam402-mcp` in a terminal to create a wallet. " +
+  "roam_catalog and roam_schema work without one.";
+
+export function registerTools(
+  server: McpServer,
+  roam: RoamClient,
+  cfg: McpConfig,
+  /** undefined → read-only mode. */
+  address?: string
+): void {
+  const needsWallet = () => (address ? null : ok(NO_WALLET));
   server.registerTool(
     "roam_catalog",
     {
@@ -113,6 +127,8 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
       inputSchema: { domain: z.string().describe("Seller domain, e.g. blockrun.ai") },
     },
     async ({ domain }) => {
+      const missing = needsWallet();
+      if (missing) return missing;
       try {
         return ok(JSON.stringify(await roam.trust(domain), null, 2));
       } catch (err) {
@@ -130,6 +146,8 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
       inputSchema: { url: z.string().describe("Full endpoint URL to check") },
     },
     async ({ url }) => {
+      const missing = needsWallet();
+      if (missing) return missing;
       try {
         return ok(JSON.stringify(await roam.precheck(url), null, 2));
       } catch (err) {
@@ -151,6 +169,8 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
       },
     },
     async ({ slug, query, json_body }) => {
+      const missing = needsWallet();
+      if (missing) return missing;
       try {
         const res = await roam.call(slug, {
           query: query as Record<string, string> | undefined,
@@ -191,6 +211,8 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
       },
     },
     async ({ intent, limit, max_price }) => {
+      const missing = needsWallet();
+      if (missing) return missing;
       try {
         const r = await roam.resolve(intent, { limit, maxPrice: max_price });
         if (!r.candidates.length) {
@@ -256,6 +278,12 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
       inputSchema: {},
     },
     async () => {
+      if (!address) {
+        return ok(
+          "No wallet is configured — there is no balance to report. " +
+            "Set ROAM_MNEMONIC, or run `npx roam402-mcp` in a terminal to create a wallet."
+        );
+      }
       try {
         const algod = new algosdk.Algodv2("", ALGOD_URL[cfg.network], "");
         const info = await algod.accountInformation(address).do();
