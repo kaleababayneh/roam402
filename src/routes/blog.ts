@@ -25,6 +25,9 @@ interface Post {
   body: string;
 }
 
+/** Package versions this post was written against — bump with a release. */
+const VERSIONS = { mcp: "0.2.1", sdk: "0.2.1" };
+
 const fmtDate = (iso: string): string =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
@@ -62,6 +65,11 @@ Base, Solana, Ethereum — getting a receipt from both chains with every respons
 Claude Desktop, Cursor) seven tools and no code. The <strong>SDK</strong> is four lines of
 TypeScript for when you are building something yourself. This post walks through both, using a
 real wallet on mainnet — every address and transaction below is genuine.</p>
+
+<p class="rx-versions">Written against
+<a href="https://www.npmjs.com/package/roam402-mcp" target="_blank" rel="noopener noreferrer"><code>roam402-mcp@${VERSIONS.mcp}</code></a> and
+<a href="https://www.npmjs.com/package/roam402" target="_blank" rel="noopener noreferrer"><code>roam402@${VERSIONS.sdk}</code></a>,
+both published on npm — <code>npx</code> and <code>npm i</code> pick them up with no version pin needed.</p>
 
 <h2 id="mcp">Part one: the MCP server</h2>
 
@@ -138,6 +146,10 @@ ${term([
   ["out", "USDC      0.1"],
 ])}
 
+<p class="rx-note-inline">The <code>--optin</code> and <code>--status</code> commands landed in
+<code>roam402-mcp@0.2.1</code>. On an older copy they will not be recognised — <code>npx</code>
+fetches the current release, or run <code>npx roam402-mcp@latest --optin</code> to be sure.</p>
+
 <p>That opt-in is <a href="https://allo.info/tx/KOLPQ75YMEFJGNTOUR7MN6NYCOXEX6LR2LKRL2HGQVPRLXSIGATA" target="_blank" rel="noopener noreferrer">on mainnet</a>:
 a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO. That is
 all an opt-in is — but without it, nothing can pay you.</p>
@@ -170,7 +182,7 @@ answered, signed and retried without you seeing it.</p>
 
 ${code(
   "bash",
-  `npm i roam402
+  `npm i roam402          # ${VERSIONS.sdk}
 # algosdk is a peer dependency when you sign from a mnemonic
 npm i algosdk`
 )}
@@ -280,6 +292,8 @@ const PROSE_CSS = `<style>
 .rx-post-card{display:block;padding:22px 24px;border:1px solid hsl(var(--border));border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(13,14,21,.04);transition:border-color .2s,transform .2s,box-shadow .2s}
 .rx-post-card:hover{border-color:#a5b4fc;transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,70,229,.08)}
 .rx-post-card h2{font-size:21px;font-weight:600;color:#1c1f2e;margin:0}
+.rx-versions{font-size:14px;color:#6b7089;padding:12px 16px;background:#f4f5fb;border:1px solid hsl(var(--border));border-radius:10px}
+.rx-note-inline{font-size:14.5px;color:#3b3f52;border-left:3px solid #a5b4fc;padding-left:14px;margin:20px 0}
 .rx-post-card p{font-size:14.5px;color:#6b7089;margin:8px 0 0;line-height:1.6}
 </style>`;
 
