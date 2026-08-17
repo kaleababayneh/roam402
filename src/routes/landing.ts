@@ -242,7 +242,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
         <ul class="flex items-center gap-8">
           <li class="text-sm font-medium link"><a href="/#how">How it works</a></li>
           <li class="text-sm font-medium link"><a href="/marketplace">Marketplace</a></li>
-          <li class="text-sm font-medium link"><a href="/receipts">Receipts</a></li>
+          <li class="text-sm font-medium link"><a href="/blog">Blog</a></li>
           <li class="text-sm font-medium link"><a href="/llms.txt">Agent spec</a></li>
         </ul>
       </div>
@@ -258,6 +258,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 <div id="m-menu" class="rx-menu lg:hidden">
   <a href="/#how">How it works</a>
   <a href="/marketplace">Marketplace</a>
+  <a href="/blog">Blog</a>
   <a href="/playground">Playground</a>
   <a href="/receipts">Receipts</a>
   <a href="/llms.txt">Agent spec</a>
@@ -487,6 +488,7 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
 <footer class="footer flex flex-col relative items-center justify-center border-t border-foreground/5 pb-8 px-6 lg:px-8 w-full max-w-6xl mx-auto lg:pt-12 pt-8 gap-4">
   <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-muted-foreground">
     <a class="link" href="/marketplace">Marketplace</a>
+    <a class="link" href="/blog">Blog</a>
     <a class="link" href="/catalog">Catalog JSON</a>
     <a class="link" href="/playground">Playground</a>
     <a class="link" href="/receipts">Receipts</a>
