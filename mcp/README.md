@@ -31,6 +31,7 @@ work, and the paid tools tell you what is missing.
 | `roam_catalog` | free | Browse every callable service: routes, USDC prices, trust tiers. Paged — filter by search/category/service/tier/method/max_price |
 | `roam_schema` | free | What inputs a route expects, probed from the origin's own x402 challenge — call before `roam_call` |
 | `roam_balance` | free | The paying wallet's ALGO + USDC balance |
+| `roam_optin` | fees only | Opt the wallet in to USDC — required once before it can receive any |
 | `roam_trust` | $0.0005 | Agents-Trust trust report for any x402 seller domain |
 | `roam_precheck` | $0.0002 | Safety check before paying an unknown x402 endpoint |
 | `roam_call` | per route | Call any wrapped service (LLM inference, token scans, market data…) with dual-chain receipts |

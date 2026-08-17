@@ -270,6 +270,57 @@ export function registerTools(
   );
 
   server.registerTool(
+    "roam_optin",
+    {
+      title: "Opt this wallet in to USDC (required before it can be paid)",
+      description:
+        "FREE (costs ~0.001 ALGO in network fees). An Algorand account cannot RECEIVE an asset it has not opted into, so a new wallet must do this once before anyone sends it USDC. Sends the 0-amount self-transfer that constitutes the opt-in. Idempotent: reports and does nothing if already opted in. Requires a little ALGO in the wallet first.",
+      inputSchema: {},
+    },
+    async () => {
+      const missing = needsWallet();
+      if (missing) return missing;
+      try {
+        const asa = USDC_ASA[cfg.network];
+        const algod = new algosdk.Algodv2("", ALGOD_URL[cfg.network], "");
+        const info = await algod.accountInformation(address!).do();
+        const algo = Number(info.amount) / 1e6;
+
+        if ((info.assets ?? []).some((a) => Number(a.assetId) === asa)) {
+          return ok(`Already opted in to USDC (asset ${asa}) on ${cfg.network}. Nothing to do.`);
+        }
+        // 0.1 base + 0.1 per asset + fee; refuse rather than broadcast a
+        // transaction that the network will reject for min-balance.
+        if (algo < 0.21) {
+          return ok(
+            `Not enough ALGO to opt in: this wallet holds ${algo} ALGO and needs ~0.21 ` +
+              `(0.1 minimum balance + 0.1 more to hold an asset + fees). ` +
+              `Send ALGO to ${address} first, then run roam_optin again.`
+          );
+        }
+
+        const sk = algosdk.mnemonicToSecretKey(cfg.mnemonic!).sk;
+        const params = await algod.getTransactionParams().do();
+        const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+          sender: address!,
+          receiver: address!,
+          amount: 0,
+          assetIndex: asa,
+          suggestedParams: params,
+        });
+        const { txid } = await algod.sendRawTransaction(txn.signTxn(sk)).do();
+        await algosdk.waitForConfirmation(algod, txid, 6);
+        return ok(
+          `Opted in to USDC (asset ${asa}) on ${cfg.network}. Transaction ${txid}. ` +
+            `This wallet can now receive USDC — send some to ${address}, then run roam_balance.`
+        );
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
     "roam_balance",
     {
       title: "Check the paying wallet's balance",

@@ -53,7 +53,7 @@ if (cfg.mnemonic) {
 
 const roam = createRoamClient({ signer, network: cfg.network, gatewayUrl: cfg.gatewayUrl });
 
-const server = new McpServer({ name: "roam402", version: "0.2.0" });
+const server = new McpServer({ name: "roam402", version: "0.2.1" });
 registerTools(server, roam, cfg, signer?.address);
 
 await server.connect(new StdioServerTransport());

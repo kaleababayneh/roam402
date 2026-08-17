@@ -1,15 +1,23 @@
 /**
  * mcp/src/config.ts — environment contract for the MCP server.
  *
- * The buyer's wallet NEVER leaves this process: the mnemonic arrives via env
- * (set in the agent host's MCP config), signs locally, and only signed
- * payment payloads go over the wire. We never log or echo key material.
+ * The buyer's wallet NEVER leaves this process: the mnemonic is read here,
+ * signs locally, and only signed payment payloads go over the wire. We never
+ * log or echo key material.
+ *
+ * PREFER ROAM_MNEMONIC_FILE over ROAM_MNEMONIC. An agent host's MCP config is
+ * synced between machines, backed up, and pasted into issues; a key sitting in
+ * it is a key in all of those places. A path is not a secret, so the config can
+ * hold the path and the key can live in one 0600 file outside any repo.
  *
  * A MISSING mnemonic is not an error. Discovery is free, so the server starts
  * read-only and only the paid tools object — crashing on startup would mean a
  * host that lists the server shows nothing at all, and a human who runs it to
  * try it out gets a stack trace instead of an explanation.
  */
+
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 
 export type RoamNetwork = "testnet" | "mainnet";
 
@@ -34,8 +42,21 @@ export const USDC_ASA: Record<RoamNetwork, number> = {
 /** Words in a valid Algorand mnemonic — checked before we try to use it. */
 const MNEMONIC_WORDS = 25;
 
+/** Read the mnemonic from ROAM_MNEMONIC_FILE, else ROAM_MNEMONIC. */
+function readMnemonic(env: NodeJS.ProcessEnv): string | undefined {
+  const file = env.ROAM_MNEMONIC_FILE?.trim();
+  if (file) {
+    try {
+      return readFileSync(file.replace(/^~(?=\/)/, homedir()), "utf8").trim();
+    } catch {
+      return undefined; // reported by mnemonicProblem(), never thrown at startup
+    }
+  }
+  return env.ROAM_MNEMONIC?.trim();
+}
+
 export function loadMcpConfig(env: NodeJS.ProcessEnv): McpConfig {
-  const raw = env.ROAM_MNEMONIC?.trim();
+  const raw = readMnemonic(env);
   const words = raw ? raw.split(/\s+/).length : 0;
   return {
     // A wrong-length mnemonic is a typo, not a wallet: treat it as absent so
@@ -48,8 +69,13 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv): McpConfig {
 
 /** Why the wallet is unusable, for a one-line startup note. null = it's fine. */
 export function mnemonicProblem(env: NodeJS.ProcessEnv): string | null {
-  const raw = env.ROAM_MNEMONIC?.trim();
-  if (!raw) return "no ROAM_MNEMONIC set";
+  const file = env.ROAM_MNEMONIC_FILE?.trim();
+  const raw = readMnemonic(env);
+  if (!raw) {
+    return file
+      ? `ROAM_MNEMONIC_FILE set but ${file} could not be read`
+      : "no ROAM_MNEMONIC or ROAM_MNEMONIC_FILE set";
+  }
   const words = raw.split(/\s+/).length;
   if (words !== MNEMONIC_WORDS) {
     return `ROAM_MNEMONIC has ${words} word${words === 1 ? "" : "s"}, expected ${MNEMONIC_WORDS}`;

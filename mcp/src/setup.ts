@@ -12,25 +12,24 @@
 
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import algosdk from "algosdk";
 import { USDC_ASA, type RoamNetwork } from "./config.js";
+
+/** Where a generated wallet is stored: one file, owner-read-only. */
+const KEY_DIR = join(homedir(), ".roam402");
+const keyPath = (network: RoamNetwork) => join(KEY_DIR, `${network}.mnemonic`);
 
 const B = (s: string) => `\u001b[1m${s}\u001b[0m`;
 const DIM = (s: string) => `\u001b[2m${s}\u001b[0m`;
 const WARN = (s: string) => `\u001b[33m${s}\u001b[0m`;
 const OK = (s: string) => `\u001b[32m${s}\u001b[0m`;
 
-function configSnippet(mnemonic: string, network: RoamNetwork): string {
+function configSnippet(env: Record<string, string>): string {
   return JSON.stringify(
-    {
-      mcpServers: {
-        roam402: {
-          command: "npx",
-          args: ["roam402-mcp"],
-          env: { ROAM_MNEMONIC: mnemonic, ROAM_NETWORK: network },
-        },
-      },
-    },
+    { mcpServers: { roam402: { command: "npx", args: ["roam402-mcp"], env } } },
     null,
     2
   );
@@ -72,9 +71,16 @@ ${DIM("Browsing the catalog is free and needs no wallet. Paying for a call does.
 No problem. To use a wallet you already have, put its 25-word mnemonic in your
 agent host's MCP config:
 
-${DIM(configSnippet("word1 word2 … word25", network))}
+${DIM(
+      configSnippet({ ROAM_MNEMONIC_FILE: keyPath(network), ROAM_NETWORK: network })
+    )}
 
-Or export it for a quick try:  ${B("export ROAM_MNEMONIC=\"word1 … word25\"")}
+…and put the 25 words in that file, readable only by you:
+
+  ${B(`mkdir -p ${KEY_DIR} && umask 077 && cat > ${keyPath(network)}`)}
+
+${DIM("A path is not a secret. Keeping the key out of the config means it is not")}
+${DIM("synced, backed up, or pasted into an issue along with your settings.")}
 
 You can also start the server with no wallet at all — the free tools
 (roam_catalog, roam_schema) work, and the paid ones will tell you what is
@@ -87,22 +93,44 @@ missing rather than failing mysteriously.
     const mnemonic = algosdk.secretKeyToMnemonic(account.sk);
     const address = account.addr.toString();
 
+    // Written, not printed: a key on screen ends up in scrollback, in a
+    // screenshot, or pasted into a chat. 0600, and the directory too.
+    let stored: string | null = null;
+    try {
+      mkdirSync(KEY_DIR, { recursive: true, mode: 0o700 });
+      writeFileSync(keyPath(network), mnemonic + "\n", { mode: 0o600 });
+      stored = keyPath(network);
+    } catch {
+      stored = null;
+    }
+
     stdout.write(`
-${WARN("⚠  These 25 words ARE the wallet. Anyone who has them can spend it.")}
-${WARN("   Store them in a password manager. Do not commit them to a repo.")}
+${OK("Wallet created.")}  ${B("Address")}  ${address}
 
-${B("Address")}   ${address}
-${B("Mnemonic")}  ${mnemonic}
+${
+      stored
+        ? `Its 25 words are saved to ${B(stored)} ${DIM("(readable only by you)")}.
+${WARN("⚠  That file IS the wallet — anyone who reads it can spend it.")}
+${WARN("   Back it up somewhere safe. Never commit or paste it.")}
+${DIM("   To see the words:")} ${B(`cat ${stored}`)}`
+        : `${WARN("⚠  Could not write the key file, so here are the 25 words ONCE.")}
+${WARN("   Save them in a password manager now — they are the wallet.")}
 
-${B("To fund it")} (${network}):
-  1. Send USDC to the address above  ${DIM(`(asset ID ${USDC_ASA[network]})`)}
-  2. Send a little ALGO for transaction fees
-  3. Opt in to the USDC asset — most wallets do this automatically on receive
-  ${DIM("Then ask your agent to run roam_balance to confirm.")}
+  ${mnemonic}`
+    }
+
+${B("To fund it")} (${network}) ${DIM("— this order matters on Algorand:")}
+  1. Send ${B("ALGO")} first ${DIM("(~0.3 to be safe)")} — an account needs a minimum
+     balance to exist, plus 0.1 more to hold any asset, plus fees.
+  2. ${B("Opt in to USDC")} ${DIM(`(asset ID ${USDC_ASA[network]})`)} — a 0-amount transfer the
+     wallet signs to itself. Ask your agent to run ${B("roam_optin")}, or do it in
+     Pera. ${WARN("USDC sent before this step will FAIL")} — an Algorand account
+     cannot receive an asset it has not opted into.
+  3. ${B("Send USDC")} to the address above. Confirm with ${B("roam_balance")}.
 
 ${B("Add this to your agent host's MCP config:")}
 
-${configSnippet(mnemonic, network)}
+${configSnippet({ ROAM_MNEMONIC_FILE: stored ?? keyPath(network), ROAM_NETWORK: network })}
 
 ${OK("Done.")} Restart your agent host and ask it: "what can I buy through roam402?"
 `);
