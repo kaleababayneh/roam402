@@ -29,7 +29,7 @@ import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { usdString } from "../pricing";
 import { searchText, routeLabel } from "../lib/routeText";
-import { termsOf, scoreMatch, TIER_RANK } from "../lib/routeMatch";
+import { termsOf, scoreMatch, idfWeights, TIER_RANK } from "../lib/routeMatch";
 
 /** Model asked to reorder a shortlist — small and fast is the right tier. */
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";
@@ -96,11 +96,18 @@ export function shortlist(intent: string, opts: ResolveOptions = {}): { terms: s
   const terms = termsOf(intent);
   if (!terms.length) return { terms, rows: [] };
 
+  // How many routes each term appears in, so a rare word outweighs filler.
+  const weights = idfWeights(terms, ROWS.length, (t) => {
+    let n = 0;
+    for (const row of ROWS) if (row.hay.includes(t)) n++;
+    return n;
+  });
+
   const scored = [];
   for (const row of ROWS) {
     if (opts.maxPrice != null && row.priceUsd > opts.maxPrice) continue;
     if (opts.method && row.method !== opts.method) continue;
-    const s = scoreMatch({ hay: row.hay, tier: row.tier, priceUsd: row.priceUsd }, terms);
+    const s = scoreMatch({ hay: row.hay, tier: row.tier, priceUsd: row.priceUsd }, terms, weights);
     if (s.score > 0) scored.push({ ...row, s });
   }
   scored.sort(

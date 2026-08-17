@@ -43,6 +43,24 @@ const term = (lines: [kind: "cmd" | "out" | "note", text: string][]): string =>
     )
     .join("")}</div>`;
 
+/** A Claude-style exchange. Tool results below are real output from the live
+ *  gateway, not mock-ups — only the prose around them is written. */
+type Turn =
+  | { who: "user"; text: string }
+  | { who: "claude"; text: string }
+  | { who: "tool"; name: string; args: string; result: string };
+
+const chat = (turns: Turn[]): string =>
+  `<div class="rx-chat"><div class="rx-chat-bar"><span class="rx-chat-dot"></span>Claude</div>${turns
+    .map((t) =>
+      t.who === "user"
+        ? `<div class="rx-msg rx-msg-user"><div class="rx-avatar rx-avatar-you">You</div><div class="rx-bubble">${t.text}</div></div>`
+        : t.who === "claude"
+          ? `<div class="rx-msg"><div class="rx-avatar rx-avatar-ai">✳</div><div class="rx-bubble rx-bubble-ai">${t.text}</div></div>`
+          : `<div class="rx-tool"><div class="rx-tool-head"><span class="rx-tool-name">${t.name}</span><span class="rx-tool-args">${t.args}</span></div><pre class="rx-tool-out">${t.result}</pre></div>`
+    )
+    .join("")}</div>`;
+
 const code = (lang: string, src: string): string =>
   `<div class="rx-code-block"><div class="rx-code-lang">${lang}</div><pre><code>${src}</code></pre></div>`;
 
@@ -154,6 +172,23 @@ fetches the current release, or run <code>npx roam402-mcp@latest --optin</code> 
 a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO. That is
 all an opt-in is — but without it, nothing can pay you.</p>
 
+<h3 id="connect">Connecting it to Claude</h3>
+
+<p>Claude Code takes it as one command — this writes the config for you:</p>
+
+${code(
+  "bash",
+  `claude mcp add roam402 \\
+  -e ROAM_MNEMONIC_FILE=~/.roam402/mainnet.mnemonic \\
+  -e ROAM_NETWORK=mainnet \\
+  -- npx roam402-mcp`
+)}
+
+<p>Claude Desktop and Cursor take the JSON above — Desktop in
+<code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, Cursor in
+<code>.cursor/mcp.json</code>. Restart the app afterwards; the tools appear once the server
+handshakes.</p>
+
 <h3 id="tools">The seven tools</h3>
 
 <p>Restart your agent host and ask it <em>"what can I buy through roam402?"</em>. It gets:</p>
@@ -174,6 +209,60 @@ all an opt-in is — but without it, nothing can pay you.</p>
 <p>The natural flow is <code>roam_resolve</code> → <code>roam_schema</code> →
 <code>roam_call</code>: say what you need, learn what the winner expects, call it. Browsing and
 reading schemas cost nothing, so an agent can explore the whole catalog before spending a cent.</p>
+
+<h3 id="conversation">What that looks like</h3>
+
+<p>You do not learn any of these tool names. You describe the job:</p>
+
+${chat([
+  { who: "user", text: "I need to turn some text into speech. What can I use, and what will it cost?" },
+  {
+    who: "tool",
+    name: "roam_resolve",
+    args: '{ intent: "convert text to speech", limit: 3 }',
+    result: `SHORTLIST for "convert text to speech" (24 matched):
+  1. xonaagent-audio-x-text-to-speech · $0.01 · xona-agent.com (Corroborated)
+       X.AI text-to-speech: convert text to speech (MP3) (Base Mainnet).
+  2. jarvisclaw-audio-speech · $0.001 · jarvisclaw.ai (Corroborated)
+       AI text-to-speech - natural voice synthesis with multiple voices
+  3. jarvisclaw-audio-transcriptions · $0.001 · jarvisclaw.ai (Corroborated)
+       AI speech-to-text - Whisper-powered audio transcription`,
+  },
+  {
+    who: "claude",
+    text: "Three options. The cheapest text-to-speech is <b>jarvisclaw-audio-speech</b> at $0.001 a call, from a Corroborated seller. Let me check what it needs.",
+  },
+  {
+    who: "tool",
+    name: "roam_schema",
+    args: '{ slug: "jarvisclaw-audio-speech" }',
+    result: `POST /r/jarvisclaw-audio-speech  [source: origin-402]
+BODY EXAMPLE:
+{
+  "model": "tts-1",
+  "input": "Hello from roam402",
+  "voice": "alloy"
+}
+NOTE: AI text-to-speech - natural voice synthesis with multiple
+voices, pay per request with USDC`,
+  },
+  {
+    who: "claude",
+    text: "It takes <code>model</code>, <code>input</code> and <code>voice</code>. Shall I call it with your text at $0.001?",
+  },
+  { who: "user", text: "yes, go ahead" },
+  {
+    who: "tool",
+    name: "roam_call",
+    args: '{ slug: "jarvisclaw-audio-speech", json_body: { … } }',
+    result: `200 OK · audio returned
+paid $0.001 USDC on Algorand
+receipts: algorand ✓  origin ✓`,
+  },
+])}
+
+<p>Nothing was spent until the last step, and the agent asked first. Resolving cost $0.0005,
+reading the schema cost nothing, and the call itself cost a tenth of a cent.</p>
 
 <h2 id="sdk">Part two: the SDK</h2>
 
@@ -282,6 +371,22 @@ const PROSE_CSS = `<style>
 .rx-code-lang{position:absolute;top:0;right:0;padding:5px 12px;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#71717a;background:#15161f;border-bottom-left-radius:10px}
 .rx-code-block pre{margin:0;padding:18px;overflow-x:auto}
 .rx-code-block code{font-family:var(--font-mono);font-size:12.5px;line-height:1.7;color:#d4d4d8;background:none;padding:0}
+.rx-chat{margin:22px 0;border:1px solid hsl(var(--border));border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(13,14,21,.04)}
+.rx-chat-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid hsl(var(--border));background:#fafaff;font-size:12px;font-weight:600;color:#6b7089}
+.rx-chat-dot{width:8px;height:8px;border-radius:9999px;background:#d97757}
+.rx-msg{display:flex;gap:11px;padding:15px 16px}
+.rx-msg-user{background:#f8f9fd}
+.rx-avatar{flex:0 0 auto;width:25px;height:25px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.rx-avatar-you{background:#e5e7f5;color:#4f46e5}
+.rx-avatar-ai{background:#d97757;color:#fff;font-size:13px}
+.rx-bubble{font-size:14.5px;line-height:1.65;color:#26293b;padding-top:3px}
+.rx-bubble-ai{color:#3b3f52}
+.rx-bubble code{font-size:12.5px}
+.rx-tool{margin:0 16px 14px 52px;border:1px solid #e3e5f0;border-radius:11px;overflow:hidden;background:#fbfbfe}
+.rx-tool-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #eceefa;font-family:var(--font-mono);font-size:11px}
+.rx-tool-name{color:#4f46e5;font-weight:600}
+.rx-tool-args{color:#9aa0b6;overflow:hidden;text-overflow:ellipsis}
+.rx-tool-out{margin:0;padding:11px 12px;font-family:var(--font-mono);font-size:11.5px;line-height:1.65;color:#4b5066;white-space:pre-wrap;overflow-x:auto}
 .rx-table-wrap{overflow-x:auto;margin:20px 0}
 .rx-table{width:100%;border-collapse:collapse;font-size:14px}
 .rx-table th{text-align:left;padding:9px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7089;border-bottom:1px solid hsl(var(--border))}

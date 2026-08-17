@@ -111,11 +111,23 @@ export function hasWord(hay: string, w: string): boolean {
   return false;
 }
 
-/** 2 = the caller's own word, 1 = a curated alias or singular, 0 = no match. */
-export function termHit(hay: string, term: string): 0 | 1 | 2 {
+/**
+ * 2 = the caller's own word, 1 = a curated alias or singular, 0 = no match.
+ *
+ * `alsoTyped` are the query's OTHER terms. An alias that is itself one of them
+ * is skipped, because the route already scored for that word: "transcribe an
+ * audio file" let the transcribe→audio alias pay a file-converter a second
+ * time for the same "audio", ranking it above actual transcription.
+ */
+export function termHit(hay: string, term: string, alsoTyped?: ReadonlySet<string>): 0 | 1 | 2 {
   if (hay.indexOf(term) >= 0) return 2;
   const alts = SYNONYMS[term];
-  if (alts) for (const a of alts) if (hasWord(hay, a)) return 1;
+  if (alts) {
+    for (const a of alts) {
+      if (alsoTyped?.has(a)) continue;
+      if (hasWord(hay, a)) return 1;
+    }
+  }
   if (term.length > 3 && term.endsWith("s") && hasWord(hay, term.slice(0, -1))) return 1;
   return 0;
 }
@@ -136,6 +148,24 @@ export interface Matchable {
   priceUsd: number;
 }
 
+/**
+ * Rarity weight for a term (classic IDF).
+ *
+ * Without it every word counts the same, so "transcribe an audio file" scored
+ * a file-conversion API and an Instagram scraper above actual transcription:
+ * they matched the common words "audio" and "file", and the rare word that
+ * carried the whole intent counted no more than the filler around it.
+ */
+export function idfWeights(terms: string[], docCount: number, df: (t: string) => number): Map<string, number> {
+  const w = new Map<string, number>();
+  for (const t of terms) {
+    const n = Math.max(1, df(t));
+    // log(N/df), floored so a very common term still counts for something.
+    w.set(t, Math.max(0.15, Math.log(docCount / n)));
+  }
+  return w;
+}
+
 export interface MatchScore {
   /** Relevance only. 0 means the route did not match every term. */
   score: number;
@@ -154,17 +184,32 @@ export interface MatchScore {
  * Literal hits are worth double an alias hit, and trust/price only break ties:
  * a Corroborated route must never outrank a genuinely better match.
  */
-export function scoreMatch(row: Matchable, terms: string[]): MatchScore {
+export function scoreMatch(
+  row: Matchable,
+  terms: string[],
+  weights?: Map<string, number>
+): MatchScore {
   const exact: string[] = [];
   const viaAlias: string[] = [];
+  const w = (t: string) => weights?.get(t) ?? 1;
+  const typed = new Set(terms);
+  let hit = 0;
+  let total = 0;
   for (const t of terms) {
-    const h = termHit(row.hay, t);
-    if (h === 2) exact.push(t);
-    else if (h === 1) viaAlias.push(t);
+    total += w(t) * 2;
+    const h = termHit(row.hay, t, typed);
+    if (h === 2) {
+      exact.push(t);
+      hit += w(t) * 2;
+    } else if (h === 1) {
+      viaAlias.push(t);
+      hit += w(t);
+    }
   }
   if (!exact.length && !viaAlias.length) return { score: 0, exact, viaAlias };
 
-  const coverage = (exact.length * 2 + viaAlias.length) / (terms.length * 2 || 1);
+  // Coverage weighted by how much each matched term actually narrows things.
+  const coverage = total > 0 ? hit / total : 0;
   const trust = (4 - (TIER_RANK[row.tier] ?? 4)) / 4; // 0..1
   // Cheaper is a mild plus; log-scaled so a $0.000001 route cannot win on price.
   const cheap = 1 / (1 + Math.log10(1 + row.priceUsd * 1_000_000));
