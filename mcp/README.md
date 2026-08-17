@@ -22,6 +22,21 @@ config block, no code.
 
 | Tool | Cost | What it does |
 |---|---|---|
+### Setting up a wallet (no wallet app needed)
+
+```
+npx roam402-mcp            # creates a wallet, saves it to ~/.roam402/<network>.mnemonic (0600)
+                           # …send it ~0.3 ALGO from any exchange…
+npx roam402-mcp --optin    # opt in to USDC — REQUIRED before it can receive any
+                           # …send it USDC…
+npx roam402-mcp --status   # address, balances, opt-in state
+```
+
+On Algorand an account cannot **receive** an asset it has not opted into, and
+the opt-in is a transaction the account signs itself — so ALGO must arrive
+first. `--optin` does that signing for you; no Pera or other wallet app is
+required at any point.
+
 **No wallet yet?** Run `npx roam402-mcp` in a terminal — it walks you through
 creating one and prints the config to paste into your agent host. Without a
 wallet the server still starts read-only: `roam_catalog` and `roam_schema`

@@ -28,8 +28,60 @@ import { createRoamClient, signerFromMnemonic } from "roam402";
 import { loadMcpConfig, mnemonicProblem } from "./config.js";
 import { registerTools } from "./tools.js";
 import { runSetupWizard } from "./setup.js";
+import { optInToUsdc, walletStatus } from "./wallet.js";
 
 const cfg = loadMcpConfig(process.env);
+const argv = process.argv.slice(2);
+const flag = (...names: string[]) => names.some((n) => argv.includes(n));
+
+if (flag("--help", "-h")) {
+  console.log(`roam402-mcp — the x402 economy for your agent, paid in USDC on Algorand.
+
+  npx roam402-mcp              start the MCP server (or set up a wallet, if run
+                               in a terminal with none configured)
+  npx roam402-mcp --status     address, ALGO/USDC balance, USDC opt-in state
+  npx roam402-mcp --optin      opt this wallet in to USDC — REQUIRED once before
+                               it can receive any. Needs ~0.21 ALGO first.
+  npx roam402-mcp --help
+
+Wallet:  ROAM_MNEMONIC_FILE=<path to a file holding 25 words>   (preferred)
+         ROAM_MNEMONIC="<25 words>"
+Network: ROAM_NETWORK=mainnet|testnet   (default mainnet)`);
+  process.exit(0);
+}
+
+// --status / --optin are the reason these exist as CLI commands: a wallet must
+// be opted in BEFORE it can receive USDC, but MCP tools only become callable
+// once an agent host is configured — which comes after funding. Without these,
+// finishing setup would require a separate wallet app.
+if (flag("--status", "--optin")) {
+  if (!cfg.mnemonic) {
+    console.error(
+      `roam402-mcp: no wallet configured (${mnemonicProblem(process.env)}).\n` +
+        `Run \`npx roam402-mcp\` with no arguments to create one.`
+    );
+    process.exit(1);
+  }
+  const { address } = await signerFromMnemonic(cfg.mnemonic);
+  try {
+    if (flag("--optin")) {
+      const outcome = await optInToUsdc(cfg, address);
+      console.log(outcome.message);
+      process.exit(outcome.kind === "underfunded" ? 1 : 0);
+    }
+    const st = await walletStatus(cfg, address);
+    console.log(
+      `address   ${st.address}\n` +
+        `network   ${st.network}\n` +
+        `ALGO      ${st.algo}\n` +
+        `USDC      ${st.optedIn ? st.usdc : "not opted in — run: npx roam402-mcp --optin"}`
+    );
+    process.exit(0);
+  } catch (err) {
+    console.error(`roam402-mcp: ${err instanceof Error ? err.message : err}`);
+    process.exit(1);
+  }
+}
 
 // A TTY on stdin means a person ran this, not an agent host: help them.
 if (!cfg.mnemonic && process.stdin.isTTY) {

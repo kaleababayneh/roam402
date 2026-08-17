@@ -18,6 +18,7 @@
 
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 export type RoamNetwork = "testnet" | "mainnet";
 
@@ -42,17 +43,35 @@ export const USDC_ASA: Record<RoamNetwork, number> = {
 /** Words in a valid Algorand mnemonic — checked before we try to use it. */
 const MNEMONIC_WORDS = 25;
 
+/** Where the setup wizard stores a wallet it created, per network. */
+export const defaultKeyPath = (network: RoamNetwork): string =>
+  join(homedir(), ".roam402", `${network}.mnemonic`);
+
+const expand = (p: string): string => p.replace(/^~(?=\/)/, homedir());
+
 /** Read the mnemonic from ROAM_MNEMONIC_FILE, else ROAM_MNEMONIC. */
 function readMnemonic(env: NodeJS.ProcessEnv): string | undefined {
+  const inline = env.ROAM_MNEMONIC?.trim();
+  if (inline) return inline;
+
   const file = env.ROAM_MNEMONIC_FILE?.trim();
   if (file) {
     try {
-      return readFileSync(file.replace(/^~(?=\/)/, homedir()), "utf8").trim();
+      return readFileSync(expand(file), "utf8").trim();
     } catch {
       return undefined; // reported by mnemonicProblem(), never thrown at startup
     }
   }
-  return env.ROAM_MNEMONIC?.trim();
+
+  // Nothing configured: fall back to the wallet our own wizard created on this
+  // machine. Without this, `npx roam402-mcp --optin` right after setup would
+  // say "no wallet configured" about a wallet we just wrote.
+  const network: RoamNetwork = env.ROAM_NETWORK === "testnet" ? "testnet" : "mainnet";
+  try {
+    return readFileSync(defaultKeyPath(network), "utf8").trim();
+  } catch {
+    return undefined;
+  }
 }
 
 export function loadMcpConfig(env: NodeJS.ProcessEnv): McpConfig {
@@ -72,9 +91,9 @@ export function mnemonicProblem(env: NodeJS.ProcessEnv): string | null {
   const file = env.ROAM_MNEMONIC_FILE?.trim();
   const raw = readMnemonic(env);
   if (!raw) {
-    return file
-      ? `ROAM_MNEMONIC_FILE set but ${file} could not be read`
-      : "no ROAM_MNEMONIC or ROAM_MNEMONIC_FILE set";
+    if (file) return `ROAM_MNEMONIC_FILE set but ${file} could not be read`;
+    const network: RoamNetwork = env.ROAM_NETWORK === "testnet" ? "testnet" : "mainnet";
+    return `no ROAM_MNEMONIC or ROAM_MNEMONIC_FILE set, and no wallet at ${defaultKeyPath(network)}`;
   }
   const words = raw.split(/\s+/).length;
   if (words !== MNEMONIC_WORDS) {

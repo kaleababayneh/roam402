@@ -12,6 +12,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import algosdk from "algosdk";
+import { optInToUsdc, walletStatus } from "./wallet.js";
 import type { RoamClient } from "roam402";
 import { ALGOD_URL, USDC_ASA, type McpConfig } from "./config.js";
 
@@ -281,38 +282,10 @@ export function registerTools(
       const missing = needsWallet();
       if (missing) return missing;
       try {
-        const asa = USDC_ASA[cfg.network];
-        const algod = new algosdk.Algodv2("", ALGOD_URL[cfg.network], "");
-        const info = await algod.accountInformation(address!).do();
-        const algo = Number(info.amount) / 1e6;
-
-        if ((info.assets ?? []).some((a) => Number(a.assetId) === asa)) {
-          return ok(`Already opted in to USDC (asset ${asa}) on ${cfg.network}. Nothing to do.`);
-        }
-        // 0.1 base + 0.1 per asset + fee; refuse rather than broadcast a
-        // transaction that the network will reject for min-balance.
-        if (algo < 0.21) {
-          return ok(
-            `Not enough ALGO to opt in: this wallet holds ${algo} ALGO and needs ~0.21 ` +
-              `(0.1 minimum balance + 0.1 more to hold an asset + fees). ` +
-              `Send ALGO to ${address} first, then run roam_optin again.`
-          );
-        }
-
-        const sk = algosdk.mnemonicToSecretKey(cfg.mnemonic!).sk;
-        const params = await algod.getTransactionParams().do();
-        const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-          sender: address!,
-          receiver: address!,
-          amount: 0,
-          assetIndex: asa,
-          suggestedParams: params,
-        });
-        const { txid } = await algod.sendRawTransaction(txn.signTxn(sk)).do();
-        await algosdk.waitForConfirmation(algod, txid, 6);
+        const outcome = await optInToUsdc(cfg, address!);
         return ok(
-          `Opted in to USDC (asset ${asa}) on ${cfg.network}. Transaction ${txid}. ` +
-            `This wallet can now receive USDC — send some to ${address}, then run roam_balance.`
+          outcome.message +
+            (outcome.kind === "done" ? " Run roam_balance to confirm." : "")
         );
       } catch (err) {
         return fail(err);
@@ -336,16 +309,14 @@ export function registerTools(
         );
       }
       try {
-        const algod = new algosdk.Algodv2("", ALGOD_URL[cfg.network], "");
-        const info = await algod.accountInformation(address).do();
-        const usdc = (info.assets ?? []).find((a) => Number(a.assetId) === USDC_ASA[cfg.network]);
+        const st = await walletStatus(cfg, address);
         return ok(
           JSON.stringify(
             {
-              address,
-              network: cfg.network,
-              algo: Number(info.amount) / 1e6,
-              usdc: usdc ? Number(usdc.amount) / 1e6 : "not opted in",
+              address: st.address,
+              network: st.network,
+              algo: st.algo,
+              usdc: st.optedIn ? st.usdc : "not opted in — run roam_optin before anyone sends USDC",
             },
             null,
             2

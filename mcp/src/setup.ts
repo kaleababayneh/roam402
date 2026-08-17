@@ -16,11 +16,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import algosdk from "algosdk";
-import { USDC_ASA, type RoamNetwork } from "./config.js";
+import { USDC_ASA, defaultKeyPath, type RoamNetwork } from "./config.js";
 
 /** Where a generated wallet is stored: one file, owner-read-only. */
 const KEY_DIR = join(homedir(), ".roam402");
-const keyPath = (network: RoamNetwork) => join(KEY_DIR, `${network}.mnemonic`);
+const keyPath = defaultKeyPath;
 
 const B = (s: string) => `\u001b[1m${s}\u001b[0m`;
 const DIM = (s: string) => `\u001b[2m${s}\u001b[0m`;
@@ -122,11 +122,16 @@ ${WARN("   Save them in a password manager now — they are the wallet.")}
 ${B("To fund it")} (${network}) ${DIM("— this order matters on Algorand:")}
   1. Send ${B("ALGO")} first ${DIM("(~0.3 to be safe)")} — an account needs a minimum
      balance to exist, plus 0.1 more to hold any asset, plus fees.
-  2. ${B("Opt in to USDC")} ${DIM(`(asset ID ${USDC_ASA[network]})`)} — a 0-amount transfer the
-     wallet signs to itself. Ask your agent to run ${B("roam_optin")}, or do it in
-     Pera. ${WARN("USDC sent before this step will FAIL")} — an Algorand account
-     cannot receive an asset it has not opted into.
-  3. ${B("Send USDC")} to the address above. Confirm with ${B("roam_balance")}.
+  2. ${B("Opt in to USDC")} ${DIM(`(asset ID ${USDC_ASA[network]})`)} — run:
+
+       ${B("npx roam402-mcp --optin")}
+
+     ${DIM("No wallet app needed; this signs the 0-amount self-transfer for you.")}
+     ${WARN("USDC sent before this step will FAIL")} — an Algorand account cannot
+     receive an asset it has not opted into.
+  3. ${B("Send USDC")} to the address above.
+
+  ${DIM("Check progress at any time with")} ${B("npx roam402-mcp --status")}
 
 ${B("Add this to your agent host's MCP config:")}
 
