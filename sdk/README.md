@@ -42,3 +42,13 @@ const scan    = await roam.call("quickintel-scan-full", {   // wrapped route
 
 Payments settle through the GoPlausible facilitator; the buyer needs only
 USDC on Algorand — no account, no API key, no gas (fee abstraction).
+
+## Concurrency
+
+Paid calls can run in parallel. The client serialises only the few milliseconds
+of payment construction, because two payments built by one wallet in the same
+millisecond are byte-identical and Algorand rejects the duplicate — an agent
+firing four calls at once would see three fail with an unexplained 402.
+
+Give each agent its own wallet: the guard covers one client, so two processes
+sharing a mnemonic can still collide.

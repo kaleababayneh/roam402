@@ -194,6 +194,49 @@ export interface RoamClient {
   fetch: typeof fetch;
 }
 
+/**
+ * Payment-building serialised per wallet, because two payments built in the
+ * SAME MILLISECOND are byte-identical and Algorand rejects the duplicate.
+ *
+ * The AVM scheme stamps each payment with `x402-payment-v<v>-<Date.now()>`.
+ * That note is the only varying field between two calls to the same route for
+ * the same price, and Date.now() has 1ms resolution — so an agent that fires
+ * four calls at once can produce four transactions with one transaction ID.
+ * Three of them fail with a 402 that explains nothing.
+ *
+ * Fixing it needs the millisecond clock to advance between payloads, so this
+ * queues createPaymentPayload and waits out the current millisecond. It is
+ * cheap: the method only builds and signs, and the origin's work happens
+ * afterwards, so concurrent CALLS still overlap — only the few milliseconds of
+ * payment construction are single-file.
+ *
+ * Caveat: this covers one client. Two processes sharing one mnemonic can still
+ * collide; give each agent its own wallet.
+ */
+export class SerialPaymentScheme extends ExactAvmScheme {
+  private queue: Promise<unknown> = Promise.resolve();
+  private lastMs = 0;
+
+  override async createPaymentPayload(
+    x402Version: number,
+    requirements: Parameters<ExactAvmScheme["createPaymentPayload"]>[1]
+  ): ReturnType<ExactAvmScheme["createPaymentPayload"]> {
+    const run = this.queue.then(async () => {
+      while (Date.now() <= this.lastMs) {
+        await new Promise((r) => setTimeout(r, 1));
+      }
+      this.lastMs = Date.now();
+      return super.createPaymentPayload(x402Version, requirements);
+    });
+    // Keep the chain alive even if one payment throws.
+    this.queue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+}
+
 export function createRoamClient(opts: RoamClientOptions): RoamClient {
   const network = opts.network ?? "mainnet";
   const base = (opts.gatewayUrl ?? DEFAULT_GATEWAY[network]).replace(/\/$/, "");
@@ -203,7 +246,7 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
   const payingFetch: typeof fetch = opts.signer
     ? (wrapFetchWithPayment(
         fetch,
-        new x402Client().register(CAIP2[network], new ExactAvmScheme(opts.signer))
+        new x402Client().register(CAIP2[network], new SerialPaymentScheme(opts.signer))
       ) as typeof fetch)
     : fetch;
 
