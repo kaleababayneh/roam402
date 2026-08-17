@@ -3597,3 +3597,16 @@ a:focus-visible{outline:2px solid #4f46e5;outline-offset:3px;border-radius:6px}
 .rx-mk-empty{grid-column:1/-1;padding:36px 4px;text-align:center;font-size:14px;color:#8a8fa6}
 .rx-mk-more{display:flex;justify-content:center;margin-top:22px}
 .rx-mk-foot{margin-top:28px;font-size:12.5px;color:#8a8fa6}
+.rx-mk-tile-i{display:inline-flex;color:#4f46e5;opacity:.85;margin-bottom:2px}
+.rx-chip svg{opacity:.7;flex:0 0 auto}
+.rx-chip.on svg{opacity:.9}
+.rx-mk-cat{display:inline-flex;align-items:center;gap:5px}
+.rx-mk-cat svg{opacity:.65}
+.rx-mk-tier{display:inline-flex;align-items:center;gap:4px}
+.rx-mk-tier svg{opacity:.8}
+.rx-mk-price{display:inline-flex;align-items:center;gap:5px}
+.rx-mk-price svg{opacity:.65}
+.rx-mk-try{display:inline-flex;align-items:center;gap:5px}
+.rx-mk-try svg{transition:transform .2s}
+.rx-mk-try:hover svg{transform:translateX(3px)}
+.rx-mk-search button{display:inline-flex;align-items:center;justify-content:center}

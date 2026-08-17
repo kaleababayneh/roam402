@@ -26,6 +26,8 @@ import type { Config } from "../config";
 import { catalog } from "../catalog";
 import { usdString } from "../pricing";
 import { routeLabel, endpointName, searchText } from "../lib/routeText";
+import { SYNONYMS } from "../lib/routeMatch";
+import { icon, type IconName } from "../lib/icons";
 
 /* ── Category display names ───────────────────────────────────────────────
    Keys are the census taxonomy slugs carried on every route. An unknown slug
@@ -43,9 +45,37 @@ const CATEGORY_LABELS: Record<string, string> = {
   web_search: "Web search",
   identity_kyc: "Identity & KYC",
   blockchain_rpc: "Blockchain RPC",
-  unknown: "Unclassified",
   other: "Other",
 };
+
+/** Category → Font Awesome glyph, so the browse grid reads at a glance. */
+const CATEGORY_ICONS: Record<string, IconName> = {
+  ai_inference: "brain",
+  ai_agent_tool: "robot",
+  market_data: "chart-line",
+  data_oracle: "database",
+  developer_tool: "code",
+  token_analytics: "coins",
+  defi_analytics: "chart-pie",
+  content_media: "photo-film",
+  web_scraping: "spider",
+  web_search: "magnifying-glass",
+  identity_kyc: "id-card",
+  blockchain_rpc: "server",
+  other: "shapes",
+};
+
+const categoryIcon = (slug: string): IconName => CATEGORY_ICONS[slug] ?? "shapes";
+
+/**
+ * Display-level bucket. The census distinguishes "unknown" (the classifier
+ * abstained) from "other" (classified as neither), which matters upstream but
+ * reads as two identical shrugs in a browse grid. Merged for BROWSING only —
+ * /catalog still returns and filters on the real slug.
+ */
+function displayCategory(slug: string): string {
+  return slug === "unknown" ? "other" : slug;
+}
 
 function categoryLabel(slug: string): string {
   return (
@@ -56,76 +86,6 @@ function categoryLabel(slug: string): string {
 
 /** Tier ordering, best first — drives the "trust" sort and chip colours. */
 const TIER_ORDER = ["Corroborated", "Established", "Emerging", "Listed", "Unrated"];
-
-/**
- * Query aliases — the cheap fix for vocabulary mismatch.
- *
- * Route text is short and literal, so a caller who types the word the industry
- * uses ("tts", "honeypot", "ohlc") misses listings that describe the same
- * capability differently. Every entry below was chosen by measuring both sides
- * against the live catalog: the key is a term that finds almost nothing on its
- * own, and the expansions are terms that actually occur in route text.
- * Measured 2026-08-16, e.g. tts=2 → speech=6 / voice=13 / audio=10,
- * llm=14 → chat=40 / model=31 / prompt=20, honeypot=1 → audit=21 / risk=77.
- *
- * Alias hits rank BELOW literal hits, so widening never buries an exact match.
- */
-export const SYNONYMS: Record<string, string[]> = {
-  // speech / audio
-  tts: ["speech", "voice", "audio"],
-  stt: ["transcri", "speech", "audio"],
-  voice: ["speech", "audio", "tts"],
-  speech: ["voice", "audio", "transcri"],
-  transcribe: ["transcri", "speech", "audio"],
-  transcription: ["transcri", "speech", "audio"],
-  // language models
-  llm: ["chat", "completion", "inference", "model", "prompt"],
-  gpt: ["chat", "completion", "model", "prompt"],
-  claude: ["chat", "completion", "model", "anthropic"],
-  chatbot: ["chat", "completion", "agent"],
-  embedding: ["embed", "vector"],
-  embeddings: ["embed", "vector"],
-  summarize: ["summar"],
-  summarise: ["summar"],
-  translate: ["translat", "language"],
-  // Token safety. Deliberately WITHOUT the bare "risk" (77 hits): it drags in
-  // macro-regime and lending-LTV routes that have nothing to do with a token
-  // rug check. "safety" is a broad query already, so it keeps risk.
-  honeypot: ["rug", "scam", "audit", "security"],
-  rugpull: ["rug", "scam", "audit", "honeypot"],
-  rug: ["scam", "audit", "honeypot", "security"],
-  scam: ["rug", "audit", "security", "honeypot"],
-  safety: ["risk", "audit", "security", "scam"],
-  // market data
-  ohlc: ["candle", "price", "market", "ticker"],
-  candles: ["candle", "ohlc", "price", "market"],
-  candlestick: ["candle", "ohlc", "price"],
-  chart: ["candle", "price", "market"],
-  quotes: ["quote", "price", "ticker"],
-  whale: ["holder", "wallet", "address"],
-  whales: ["holder", "wallet", "address"],
-  // vision / documents
-  ocr: ["image", "extract", "vision", "text"],
-  vision: ["image", "ocr"],
-  // identity / infra
-  kyc: ["identity", "compliance", "verification", "sanction"],
-  aml: ["compliance", "sanction", "risk", "identity"],
-  rpc: ["node", "chain", "blockchain"],
-  whois: ["domain", "dns"],
-  // web
-  crawl: ["scrape", "extract", "web"],
-  crawler: ["scrape", "extract", "web"],
-  scraper: ["scrape", "extract", "web"],
-  // defi
-  nft: ["token", "collection", "mint"],
-  dex: ["swap", "liquidity", "pool", "trade"],
-  swap: ["dex", "liquidity", "pool", "trade"],
-  apy: ["yield", "stake"],
-  // social
-  sentiment: ["social", "news", "twitter"],
-  tweet: ["twitter", "social"],
-  tweets: ["twitter", "social"],
-};
 
 /* ── Index construction ───────────────────────────────────────────────── */
 
@@ -178,7 +138,7 @@ function buildIndex(): MarketIndex {
     return [
       r.slug,
       intern(r.service, services, si),
-      intern(r.category || "other", cats, ci),
+      intern(displayCategory(r.category || "other"), cats, ci),
       intern(r.tier || "Unrated", tiers, ti),
       r.method === "POST" ? 1 : 0,
       // micro-USD keeps the payload integral; the client divides by 1e6.
@@ -201,7 +161,7 @@ function categoryStats(): { slug: string; label: string; routes: number; service
   const routes = new Map<string, number>();
   const svc = new Map<string, Set<string>>();
   for (const r of catalog.routes) {
-    const k = r.category || "other";
+    const k = displayCategory(r.category || "other");
     routes.set(k, (routes.get(k) ?? 0) + 1);
     (svc.get(k) ?? svc.set(k, new Set()).get(k)!).add(r.service);
   }
@@ -238,6 +198,7 @@ function page(cfg: Config): string {
   const tiles = stats
     .map(
       (c) => `<button class="rx-mk-tile" data-cat="${c.slug}" type="button">
+        <span class="rx-mk-tile-i">${icon(categoryIcon(c.slug), 18)}</span>
         <span class="rx-mk-tile-n">${c.routes}</span>
         <span class="rx-mk-tile-l">${c.label}</span>
         <span class="rx-mk-tile-s">${c.services} service${c.services === 1 ? "" : "s"}</span>
@@ -248,7 +209,8 @@ function page(cfg: Config): string {
   const catChips = [`<button class="rx-chip on" data-cat="" type="button">All</button>`]
     .concat(
       stats.map(
-        (c) => `<button class="rx-chip" data-cat="${c.slug}" type="button">${c.label} <i>${c.routes}</i></button>`
+        (c) =>
+          `<button class="rx-chip" data-cat="${c.slug}" type="button">${icon(categoryIcon(c.slug), 12)} ${c.label} <i>${c.routes}</i></button>`
       )
     )
     .join("\n          ");
@@ -332,11 +294,11 @@ ${base ? `<link rel="canonical" href="${base}/marketplace"/>` : ""}
     <p class="text-base text-muted-foreground mt-3 max-w-2xl">${routes} wrapped routes from ${services} services across ${stats.length} categories — ${median} median a call, from ${floor}. Pay in USDC on Algorand; the origin is settled on its own chain and you get receipts from both.</p>
 
     <div class="rx-mk-search">
-      <span class="rx-mk-search-i" aria-hidden="true">${ICON_SEARCH}</span>
+      <span class="rx-mk-search-i" aria-hidden="true">${icon("magnifying-glass", 15)}</span>
       <input id="q" type="search" autocomplete="off" spellcheck="false"
              placeholder="Search ${routes} routes — try &quot;speech&quot;, &quot;honeypot&quot;, &quot;chat completions&quot;, a service domain…"
              aria-label="Search the marketplace"/>
-      <button id="clear" type="button" aria-label="Clear search" hidden>✕</button>
+      <button id="clear" type="button" aria-label="Clear search" hidden>${icon("xmark", 13)}</button>
     </div>
 
     <!-- Category browse: shown until a filter or query narrows things down -->
@@ -389,6 +351,7 @@ ${base ? `<link rel="canonical" href="${base}/marketplace"/>` : ""}
     <a class="link" href="/llms.txt">llms.txt</a>
   </div>
   <p class="text-sm text-muted-foreground md:mt-0 text-center">© 2026 Roam402 · built by <a class="rx-accent" href="https://agents-trust.ai">Agents-Trust</a></p>
+  <p class="text-[11px] text-muted-foreground/70 text-center">Icons by <a class="link" href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Font Awesome Free</a> (CC BY 4.0)</p>
 </footer>
 
 <script id="mk-index" type="application/json">${indexJson}</script>
@@ -398,6 +361,12 @@ ${base ? `<link rel="canonical" href="${base}/marketplace"/>` : ""}
   var $ = function (id) { return document.getElementById(id); };
   var TIER_RANK = ${JSON.stringify(TIER_ORDER)};
   var SYN = ${JSON.stringify(SYNONYMS)};
+  var CAT_ICON = ${JSON.stringify(
+    Object.fromEntries(stats.map((c) => [c.slug, icon(categoryIcon(c.slug), 11)]))
+  )};
+  var I_SHIELD = ${JSON.stringify(icon("shield-halved", 11))};
+  var I_TAG = ${JSON.stringify(icon("tag", 11))};
+  var I_ARROW = ${JSON.stringify(icon("arrow-right", 11))};
   var PAGE = 48;
 
   /* Flatten once: every row gets a lowercase haystack so keystroke filtering
@@ -478,15 +447,15 @@ ${base ? `<link rel="canonical" href="${base}/marketplace"/>` : ""}
     var tierCls = "rx-tier-" + r.tier.toLowerCase();
     el.innerHTML =
       '<div class="rx-mk-top">' +
-        '<button class="rx-mk-cat" data-cat="' + r.cat + '" type="button">' + r.catLabel + '</button>' +
-        '<span class="rx-mk-tier ' + tierCls + '">' + r.tier + '</span>' +
+        '<button class="rx-mk-cat" data-cat="' + r.cat + '" type="button">' + (CAT_ICON[r.cat] || "") + ' ' + r.catLabel + '</button>' +
+        '<span class="rx-mk-tier ' + tierCls + '">' + I_SHIELD + ' ' + r.tier + '</span>' +
       '</div>' +
       '<h3 class="rx-mk-name"></h3>' +
       '<div class="rx-mk-svc rx-mono"></div>' +
       '<div class="rx-mk-path rx-mono"><span class="rx-mk-m">' + r.method + '</span> /r/' + r.slug + '</div>' +
       '<div class="rx-mk-bot">' +
-        '<span class="rx-mk-price rx-mono">' + money(r.price) + '</span>' +
-        '<a class="rx-mk-try" href="/playground?route=' + encodeURIComponent(r.slug) + '">Try it →</a>' +
+        '<span class="rx-mk-price rx-mono">' + I_TAG + ' ' + money(r.price) + '</span>' +
+        '<a class="rx-mk-try" href="/playground?route=' + encodeURIComponent(r.slug) + '">Try it ' + I_ARROW + '</a>' +
       '</div>';
     // textContent for anything origin-authored — never innerHTML.
     el.querySelector(".rx-mk-name").textContent = r.label;
@@ -589,7 +558,7 @@ ${base ? `<link rel="canonical" href="${base}/marketplace"/>` : ""}
   (function boot() {
     var p = new URLSearchParams(location.search);
     state.q = p.get("q") || "";
-    state.cat = p.get("cat") || "";
+    state.cat = p.get("cat") === "unknown" ? "other" : p.get("cat") || "";
     state.tier = p.get("tier") || "";
     state.m = p.get("m") || "";
     state.sort = p.get("sort") || "trust";

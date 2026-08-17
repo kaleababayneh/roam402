@@ -125,27 +125,37 @@ function nativeRows(): string {
 
 /* orbiting hero decoration: chains roaming around the Algorand-anchored gateway */
 function orbitRings(): string {
-  const dot = (cls: string) =>
-    `<svg class="${cls}" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor"/></svg>`;
+  const dot = (cls: string, colour = "") =>
+    `<svg class="${cls}"${colour ? ` style="color:${colour}"` : ""} width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor"/></svg>`;
   const orb = (radius: number, duration: number, angle: number, inner: string) =>
     `<div style="--duration:${duration};--radius:${radius};--angle:${angle};--icon-size:34px" class="absolute flex size-[var(--icon-size)] transform-gpu animate-orbit items-center justify-center rounded-full">${inner}</div>`;
   const ring = (r: number) =>
     `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="pointer-events-none absolute inset-0 size-full"><circle class="stroke-white/10 stroke-1 currentColor" stroke-dasharray="5 5" cx="50%" cy="50%" r="${r}" fill="none"/></svg>`;
+  // Each chain in its own brand colour — the orbit is the one place the page
+  // shows the networks it roams across, so muting them to grey wasted it.
   const mark = (svg: string, size: string, tone: string) =>
     `<span class="${size} ${tone}" aria-hidden="true">${svg}</span>`;
+  const BRAND = {
+    algorand: "color:#000000",
+    base: "color:#0052FF",
+    solana: "color:#14F195",
+    ethereum: "color:#627EEA",
+  } as const;
+  const brandMark = (svg: string, size: string, style: string, opacity = 0.95) =>
+    `<span class="${size}" style="${style};opacity:${opacity}" aria-hidden="true">${svg}</span>`;
 
   return `${ring(300)}
-        ${orb(300, 40, 0, mark(MARK_ALGORAND, "size-5", "text-foreground/80"))}
+        ${orb(300, 40, 0, brandMark(MARK_ALGORAND, "size-5", BRAND.algorand))}
         ${orb(300, 40, 180, mark(ICON_USDC, "size-5", "opacity-80"))}
         ${ring(400)}
-        ${orb(400, 80, 0, mark(MARK_BASE, "size-4", "text-foreground/70"))}
-        ${orb(400, 80, 120, mark(MARK_SOLANA, "size-4", "text-foreground/70"))}
-        ${orb(400, 80, 240, dot("size-1 text-foreground/50"))}
+        ${orb(400, 80, 0, brandMark(MARK_BASE, "size-4", BRAND.base))}
+        ${orb(400, 80, 120, brandMark(MARK_SOLANA, "size-4", BRAND.solana))}
+        ${orb(400, 80, 240, dot("size-1", "#818cf8"))}
         ${ring(500)}
-        ${orb(500, 200, 0, dot("size-1 text-foreground/50"))}
-        ${orb(500, 200, 90, mark(MARK_ETHEREUM, "size-5", "text-foreground/60"))}
-        ${orb(500, 200, 180, dot("size-1 text-foreground/90"))}
-        ${orb(500, 200, 270, dot("size-1 text-foreground/50"))}`;
+        ${orb(500, 200, 0, dot("size-1", "#22d3ee"))}
+        ${orb(500, 200, 90, brandMark(MARK_ETHEREUM, "size-5", BRAND.ethereum))}
+        ${orb(500, 200, 180, dot("size-1", "#4f46e5"))}
+        ${orb(500, 200, 270, dot("size-1", "#f59e0b"))}`;
 }
 
 const LUCIDE = {
@@ -448,10 +458,10 @@ ${base ? `<link rel="canonical" href="${base}/"/>` : ""}
         <div class="relative flex flex-col items-center justify-center py-12 lg:py-20 px-4 rounded-2xl lg:rounded-3xl bg-background/20 text-center border border-foreground/20 overflow-hidden">
           <div class="absolute -bottom-1/8 left-1/3 -translate-x-1/2 w-44 h-32 lg:h-52 lg:w-1/3 rounded-full blur-[5rem] lg:blur-[10rem] -z-10" style="background:conic-gradient(from 0deg at 50% 50%, #818cf8 0deg, #4f46e5 180deg, #6366f1 360deg)"></div>
           <div class="rx-chainrow" aria-label="Algorand, Base, Solana, Ethereum">
-            <span title="Algorand"><i class="m">${MARK_ALGORAND}</i></span>
-            <span title="Base"><i class="m">${MARK_BASE}</i></span>
-            <span title="Solana"><i class="m">${MARK_SOLANA}</i></span>
-            <span title="Ethereum"><i class="m">${MARK_ETHEREUM}</i></span>
+            <span title="Algorand"><i class="m" style="color:#000000">${MARK_ALGORAND}</i></span>
+            <span title="Base"><i class="m" style="color:#0052FF">${MARK_BASE}</i></span>
+            <span title="Solana"><i class="m" style="color:#14F195">${MARK_SOLANA}</i></span>
+            <span title="Ethereum"><i class="m" style="color:#627EEA">${MARK_ETHEREUM}</i></span>
           </div>
           <div class="rx-eyebrow">ONE GATEWAY · EVERY CHAIN</div>
           <h2 class="text-3xl md:text-5xl lg:text-6xl font-heading font-medium !leading-snug">Ready to let your <br/>agents <span class="font-subheading italic">roam</span>?</h2>
@@ -547,6 +557,9 @@ endpoints, one merchant address, dual-chain receipts.
   call. ?limit=all returns all ${n} routes (~1MB — it will fill your context).
 - Any route: request without payment → HTTP 402 challenge (x402 v2,
   PAYMENT-REQUIRED header) → retry with X-PAYMENT.
+- GET /resolve?intent={plain English} — describe what you need and get a
+  ranked SHORTLIST of matching routes with prices, tiers and schema links.
+  It never calls a route and never spends anything: you pick, then pay.
 - GET /trust?domain={domain} — Agents-Trust tier + score for any x402 seller
 - GET /precheck?url={url} — safety check before paying an unknown endpoint
 

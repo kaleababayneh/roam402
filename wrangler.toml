@@ -34,6 +34,13 @@ KILL_SWITCH = "off"                       # "on" → every paid route returns 50
 PER_REQUEST_CAP_USD = "1.00"              # refuse origin spends above this
 PUBLIC_BASE_URL = "https://roam402.com"   # advertised in every 402's extra.catalog (.dev.vars overrides locally)
 
+# ── Workers AI (optional) ────────────────────────────────────────────────────
+# /resolve stage 2: reorders a shortlist stage 1 already produced. If this
+# binding is absent or the model errors, /resolve returns the deterministic
+# ranking and says so in `ranked_by` — it never hard-fails on inference.
+[ai]
+binding = "AI"
+
 # ── Receipts log (optional, recommended before mainnet) ──────────────────────
 [[kv_namespaces]]
 binding = "RECEIPTS"

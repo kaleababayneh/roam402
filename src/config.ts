@@ -47,6 +47,8 @@ export interface Env {
   BASE_WALLET_PRIVATE_KEY?: string;
   /** Optional KV binding — receipts log + route health (see src/receipts/store.ts). */
   RECEIPTS?: KVNamespace;
+  /** Workers AI — /resolve stage 2 only. Absent is a supported state. */
+  AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   /** Secret — Ed25519 private JWK enabling signed offers/receipts. */
   RECEIPT_SIGNING_JWK?: string;
   /** Dev/testnet only — injects the /r/test-sepolia loop-test route. */

@@ -13,6 +13,7 @@ import type { RouteConfig } from "@x402/core/server";
 import type { Config } from "../config";
 import { GatewayError } from "../lib/errors";
 import { catalogPayload, queryFromRequest } from "./free";
+import { resolve, cacheKey, RESOLVE_CACHE_TTL_S } from "./resolve";
 import type { ReceiptStore } from "../receipts/store";
 import { censusRows, trustDomain, type TrustDomainRow } from "../lib/census";
 import { catalog } from "../catalog";
@@ -39,6 +40,32 @@ export const NATIVE_ROUTES: NativeRoute[] = [
           name: "Roam402 | the x402 roaming gateway",
           wrapped: [{ path: "/r/quickintel-scan-full", method: "GET", price: "$0.03", service: "quickintel.io", trust_tier: "Listed" }],
           native: [{ path: "/trust", price: "$0.0005" }],
+        },
+      },
+    }),
+  },
+  {
+    path: "/resolve",
+    priceUsd: 0.0005,
+    description:
+      "Plain-English endpoint finder: describe what you need (\"check a token for honeypots\", \"transcribe audio\") and get a RANKED SHORTLIST of matching x402 routes with prices, trust tiers and input schemas. Returns candidates only — it never calls a route and never spends your money. Query: ?intent=your+request&limit=5&max_price=0.05",
+    discovery: declareDiscoveryExtension({
+      input: { queryParams: { intent: "check a token for honeypots before I buy", limit: "5" } },
+      output: {
+        example: {
+          ranked_by: "model",
+          total_matches: 14,
+          candidates: [
+            {
+              path: "/r/lonestaroracle-pool",
+              price: "$0.05",
+              service: "lonestaroracle.xyz",
+              trust_tier: "Emerging",
+              description: "Aerodrome DEX pool risk assessment — checks both tokens for honeypots and rug vectors",
+              matched: ["honeypot"],
+              schema: "/schema?route=/r/lonestaroracle-pool",
+            },
+          ],
         },
       },
     }),
@@ -176,6 +203,39 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     // Same paging contract as free /catalog: a buyer paying for discovery must
     // not receive ~250k tokens of route table by default.
     return c.json(catalogPayload(cfg, queryFromRequest(c.req)));
+  });
+
+  app.get("/resolve", async (c) => {
+    await record("/resolve");
+    const intent = (c.req.query("intent") ?? c.req.query("q") ?? "").trim();
+    if (!intent) {
+      throw new GatewayError(
+        "Missing ?intent= — describe what you need in plain English.",
+        400,
+        "bad_request"
+      );
+    }
+    const maxPrice = Number(c.req.query("max_price"));
+    const method = (c.req.query("method") ?? "").toUpperCase();
+    const opts = {
+      limit: Number(c.req.query("limit")) || undefined,
+      maxPrice: Number.isFinite(maxPrice) ? maxPrice : null,
+      method: method === "GET" || method === "POST" ? method : null,
+    };
+
+    // Intents repeat; the shortlist for one is stable for hours. Cache before
+    // spending an inference call, and treat cache failure as a cache miss.
+    const key = cacheKey(intent, opts);
+    const cached = await kv?.get(key, "json").catch(() => null);
+    if (cached) return c.json({ ...(cached as object), cached: true });
+
+    const result = await resolve(intent, opts, (c.env as { AI?: Parameters<typeof resolve>[2] }).AI);
+    if (result.candidates.length) {
+      await kv
+        ?.put(key, JSON.stringify(result), { expirationTtl: RESOLVE_CACHE_TTL_S })
+        .catch(() => {});
+    }
+    return c.json(result);
   });
 
   app.get("/trust", async (c) => {
