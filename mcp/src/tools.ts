@@ -56,11 +56,15 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
         search: z.string().optional().describe("Free-text search over route, service and description"),
         category: z.string().optional().describe("Filter by category, e.g. market_data, ai_inference"),
         service: z.string().optional().describe("Filter by origin service domain, e.g. quickintel.io"),
+        tier: z.string().optional().describe("Exact trust tier: Corroborated, Established, Emerging, Listed"),
+        method: z.enum(["GET", "POST"]).optional().describe("Only GET or only POST routes"),
+        max_price: z.number().optional().describe("Only routes at or below this USDC price"),
+        offset: z.number().optional().describe("Page offset — the previous call reports total and returned"),
       },
     },
-    async ({ search, category, service }) => {
+    async ({ search, category, service, tier, method, max_price, offset }) => {
       try {
-        if (!search && !category && !service) {
+        if (!search && !category && !service && !tier && !method && max_price == null) {
           // Summary mode: the gateway's aggregate stats cover the FULL
           // catalog even though the unfiltered payload is truncated at 500.
           const cat = await roam.catalog();
@@ -81,9 +85,14 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
           ];
           return ok(clip(lines.join("\n")));
         }
-        const cat = await roam.catalog({ q: search, category, service, limit: 60 });
+        const cat = await roam.catalog({
+          q: search, category, service, tier, method, maxPrice: max_price,
+          limit: 40, offset,
+        });
+        const shown = (cat.offset ?? 0) + cat.wrapped.length;
+        const more = cat.total > shown ? ` — call again with offset=${shown} for the next page` : "";
         const lines = [
-          `MATCHES (${cat.wrapped.length}${cat.wrapped.length === 60 ? "+, narrow your filter" : ""}):`,
+          `MATCHES ${(cat.offset ?? 0) + 1}-${shown} of ${cat.total}${more}:`,
           ...cat.wrapped.map(
             (w) => `  ${w.path} · ${w.price} · ${w.service} (${w.trust_tier}) — ${w.description.slice(0, 90)}`
           ),
@@ -149,9 +158,89 @@ export function registerTools(server: McpServer, roam: RoamClient, cfg: McpConfi
         });
         const text = await res.text();
         if (!res.ok) {
+          // A 402 surviving the paying fetch means the payment never went
+          // through — say so, rather than echoing an empty body at the agent.
+          if (res.status === 402) {
+            return fail(
+              new Error(
+                "payment required but NOT completed — this wallet could not pay. " +
+                  "Run roam_balance: it needs USDC for the price, ALGO for fees, and " +
+                  "an opt-in to the USDC asset. Nothing was charged."
+              )
+            );
+          }
           return fail(new Error(`HTTP ${res.status}: ${clip(text)}`));
         }
         return ok(clip(text) + receiptLines(res));
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "roam_resolve",
+    {
+      title: "Find routes from a plain-English request",
+      description:
+        "PAID ($0.0005). Describe what you need in plain English and get a RANKED SHORTLIST of matching routes with prices, trust tiers and input schemas. Prefer this over browsing when you know the capability but not the slug. It only suggests: it never calls a route and never spends beyond its own fee — pick a candidate, then roam_schema it and roam_call it.",
+      inputSchema: {
+        intent: z.string().describe('What you need, e.g. "check a token for honeypots before buying"'),
+        limit: z.number().optional().describe("Candidates to return (default 5, max 10)"),
+        max_price: z.number().optional().describe("Only consider routes at or below this USDC price"),
+      },
+    },
+    async ({ intent, limit, max_price }) => {
+      try {
+        const r = await roam.resolve(intent, { limit, maxPrice: max_price });
+        if (!r.candidates.length) {
+          return ok(`No route matched "${intent}". Try roam_catalog with a broader search term.`);
+        }
+        const lines = [
+          `SHORTLIST for "${r.intent}" (${r.total_matches} matched, ranked by ${r.ranked_by}):`,
+          ...r.candidates.map((c, i) => {
+            const slug = c.path.replace(/^\/r\//, "");
+            const matched = c.matched.length ? ` [matched: ${c.matched.join(", ")}]` : "";
+            // `why` is model text about third-party listings — label it as such.
+            const why = c.why ? `\n       note (model): ${c.why}` : "";
+            return `  ${i + 1}. ${slug} · ${c.price} · ${c.service} (${c.trust_tier})\n       ${c.description}${matched}${why}`;
+          }),
+          "",
+          "Nothing has been charged for these routes. roam_schema <slug> for inputs, then roam_call.",
+        ];
+        return ok(clip(lines.join("\n")));
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "roam_schema",
+    {
+      title: "What inputs a route expects",
+      description:
+        "FREE. The query parameters or JSON body a catalog route expects, probed from the origin's own x402 challenge. Call this before roam_call on an unfamiliar route so you send the right fields instead of guessing.",
+      inputSchema: {
+        slug: z.string().describe("Route slug, e.g. blockrun-chat-completions"),
+      },
+    },
+    async ({ slug }) => {
+      try {
+        const s = await roam.schema(slug);
+        const params = s.params?.length
+          ? s.params.map((p) => `  ${p.name}${p.required ? "*" : ""}${p.example ? ` (e.g. ${p.example})` : ""}${p.description ? ` — ${p.description}` : ""}`)
+          : s.params
+            ? ["  (the origin declares no query parameters)"]
+            : ["  (unknown — the origin publishes no schema; try roam_call and read the error)"];
+        const lines = [
+          `${s.method} ${s.route}  [source: ${s.source}]`,
+          "PARAMS (* = required):",
+          ...params,
+          ...(s.bodyExample ? ["", "BODY EXAMPLE:", s.bodyExample] : []),
+          ...(s.note ? ["", `NOTE: ${s.note}`] : []),
+        ];
+        return ok(clip(lines.join("\n")));
       } catch (err) {
         return fail(err);
       }

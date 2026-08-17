@@ -28,7 +28,7 @@ const roam = createRoamClient({
   gatewayUrl: cfg.gatewayUrl,
 });
 
-const server = new McpServer({ name: "roam402", version: "0.1.0" });
+const server = new McpServer({ name: "roam402", version: "0.2.0" });
 registerTools(server, roam, cfg, signer.address);
 
 await server.connect(new StdioServerTransport());

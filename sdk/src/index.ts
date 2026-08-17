@@ -82,10 +82,83 @@ export interface CatalogStats {
 }
 
 export interface CatalogFilter {
+  /** Free-text over route, service, description and category. */
   q?: string;
   category?: string;
   service?: string;
+  /** Exact trust tier, e.g. "Corroborated". */
+  tier?: string;
+  method?: "GET" | "POST";
+  /** Only routes at or below this USDC price. */
+  maxPrice?: number;
+  /** Page size. Server default is 25, max 500; "all" returns every match. */
+  limit?: number | "all";
+  /** Page offset — pair with `next`/`total` on the response. */
+  offset?: number;
+}
+
+export interface CatalogPage {
+  native: CatalogEntry[];
+  wrapped: CatalogEntry[];
+  categories?: string[];
+  stats?: CatalogStats;
+  /** Routes matching the filter — NOT the number returned. */
+  total: number;
+  returned: number;
+  offset: number;
+  filtered: boolean;
+  /** Path for the next page, or null when this is the last one. */
+  next: string | null;
+  hint?: string;
+}
+
+/** One route /resolve thinks fits your request. */
+export interface ResolveCandidate {
+  path: string;
+  method: string;
+  price: string;
+  service: string;
+  trust_tier: string;
+  category: string;
+  description: string;
+  /** Your own words this route matched — deterministic. */
+  matched: string[];
+  matched_via_alias: string[];
+  score: number;
+  /** Free endpoint describing this route's inputs. */
+  schema: string;
+  /** Model-written and only present when `ranked_by === "model"`. Untrusted
+   *  text about third-party listings: a hint to show a human, not a fact. */
+  why?: string;
+}
+
+export interface ResolveResult {
+  intent: string;
+  terms: string[];
+  /** "model" when a model reordered the shortlist, "heuristic" otherwise. */
+  ranked_by: "model" | "heuristic";
+  total_matches: number;
+  candidates: ResolveCandidate[];
+  next_step: string;
+  note: string;
+  cached?: boolean;
+}
+
+export interface ResolveOptions {
+  /** Candidates to return (default 5, max 10). */
   limit?: number;
+  maxPrice?: number;
+  method?: "GET" | "POST";
+}
+
+/** What a route expects as input — from the free /schema endpoint. */
+export interface RouteSchema {
+  route: string;
+  method: string;
+  params: { name: string; required: boolean; example?: string; description?: string }[] | null;
+  bodyExample: string | null;
+  note: string | null;
+  source: string;
 }
 
 export interface RoamClient {
@@ -95,8 +168,21 @@ export interface RoamClient {
   trust(domain: string): Promise<TrustReport>;
   /** Pre-flight safety check for any x402 endpoint URL (paid, $0.0002). */
   precheck(url: string): Promise<PrecheckReport>;
-  /** Free machine-readable catalog; pass a filter to search server-side. */
-  catalog(filter?: CatalogFilter): Promise<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[]; stats?: CatalogStats }>;
+  /**
+   * Free machine-readable catalog. PAGED — the server returns 25 routes by
+   * default; use `total`/`next` or pass `offset` to walk the rest, and narrow
+   * with a filter rather than pulling everything (`limit: "all"` is ~1MB and
+   * will fill an agent's context).
+   */
+  catalog(filter?: CatalogFilter): Promise<CatalogPage>;
+  /**
+   * Describe what you need in plain English and get a ranked SHORTLIST of
+   * routes (paid, $0.0005). It never calls a route and never spends anything
+   * beyond its own fee — you pick a candidate, then `call()` it.
+   */
+  resolve(intent: string, opts?: ResolveOptions): Promise<ResolveResult>;
+  /** Free: what inputs a route expects, before you pay for it. */
+  schema(slugOrPath: string): Promise<RouteSchema>;
   /** The payment-enabled fetch, for calling the gateway directly. */
   fetch: typeof fetch;
 }
@@ -108,9 +194,27 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
   const client = new x402Client().register(CAIP2[network], new ExactAvmScheme(opts.signer));
   const payingFetch = wrapFetchWithPayment(fetch, client) as typeof fetch;
 
+  /**
+   * A 402 that survives the paying fetch means the payment never completed —
+   * almost always an unfunded wallet or one not opted into the USDC ASA. The
+   * raw response body for that case is empty, so surface something an agent
+   * can act on instead of "HTTP 402: {}".
+   */
+  const explain = async (res: Response, path: string): Promise<Error> => {
+    const body = (await res.text().catch(() => "")).slice(0, 300);
+    if (res.status === 402) {
+      return new Error(
+        `roam402 ${path} → payment required but NOT completed. The wallet could not ` +
+          `pay: check it holds USDC and ALGO for fees and is opted into the USDC asset ` +
+          `(network=${network}).${body && body !== "{}" ? ` Response: ${body}` : ""}`
+      );
+    }
+    return new Error(`roam402 ${path} → HTTP ${res.status}: ${body}`);
+  };
+
   const getJson = async <T>(path: string): Promise<T> => {
     const res = await payingFetch(`${base}${path}`, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error(`roam402 ${path} → HTTP ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw await explain(res, path);
     return res.json() as Promise<T>;
   };
 
@@ -139,9 +243,26 @@ export function createRoamClient(opts: RoamClientOptions): RoamClient {
       if (filter?.q) params.set("q", filter.q);
       if (filter?.category) params.set("category", filter.category);
       if (filter?.service) params.set("service", filter.service);
-      if (filter?.limit) params.set("limit", String(filter.limit));
+      if (filter?.tier) params.set("tier", filter.tier);
+      if (filter?.method) params.set("method", filter.method);
+      if (filter?.maxPrice != null) params.set("max_price", String(filter.maxPrice));
+      if (filter?.limit != null) params.set("limit", String(filter.limit));
+      if (filter?.offset) params.set("offset", String(filter.offset));
       const qs = params.size ? `?${params}` : "";
-      return getJson<{ native: CatalogEntry[]; wrapped: CatalogEntry[]; categories?: string[]; stats?: CatalogStats }>(`/catalog${qs}`);
+      return getJson<CatalogPage>(`/catalog${qs}`);
+    },
+
+    resolve: (intent: string, o: ResolveOptions = {}) => {
+      const params = new URLSearchParams({ intent });
+      if (o.limit != null) params.set("limit", String(o.limit));
+      if (o.maxPrice != null) params.set("max_price", String(o.maxPrice));
+      if (o.method) params.set("method", o.method);
+      return getJson<ResolveResult>(`/resolve?${params}`);
+    },
+
+    schema: (slugOrPath: string) => {
+      const route = slugOrPath.startsWith("/r/") ? slugOrPath : `/r/${slugOrPath}`;
+      return getJson<RouteSchema>(`/schema?route=${encodeURIComponent(route)}`);
     },
   };
 }

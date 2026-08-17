@@ -16,7 +16,13 @@ const roam = createRoamClient({
   network: "mainnet",
 });
 
-const catalog = await roam.catalog();                       // free discovery
+const catalog = await roam.catalog();                       // free, paged (25/page)
+const page2   = await roam.catalog({ offset: 25 });         // …walk it with total/next
+const found   = await roam.catalog({ q: "speech", maxPrice: 0.01, method: "POST" });
+
+// Or just say what you need ($0.0005) — returns candidates, never buys them:
+const { candidates } = await roam.resolve("transcribe an audio file", { limit: 3 });
+const inputs = await roam.schema(candidates[0].path);       // free: what it expects
 const trust   = await roam.trust("blockrun.ai");            // $0.0005
 const check   = await roam.precheck("https://…/endpoint");  // $0.0002
 const scan    = await roam.call("quickintel-scan-full", {   // wrapped route
