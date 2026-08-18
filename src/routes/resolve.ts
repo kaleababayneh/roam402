@@ -34,6 +34,8 @@ import { termsOf, scoreMatch, idfWeights, TIER_RANK } from "../lib/routeMatch";
 /** Model asked to reorder a shortlist — small and fast is the right tier. */
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const SHORTLIST = 24; // what stage 1 hands to stage 2
+/** Most routes any single service may occupy in a shortlist. */
+const MAX_PER_SERVICE = 2;
 const DEFAULT_RETURN = 5;
 const MAX_RETURN = 10;
 const MODEL_TIMEOUT_MS = 6_000;
@@ -59,6 +61,9 @@ export interface ResolveCandidate {
 
 interface Row {
   slug: string;
+  /** Length of the displayed description and how many routes share it. */
+  len: number;
+  shared: number;
   path: string;
   method: string;
   priceUsd: number;
@@ -68,6 +73,16 @@ interface Row {
   description: string;
   hay: string;
 }
+
+/** How many routes wear each exact description, computed once. */
+const SHARED = (() => {
+  const n = new Map<string, number>();
+  for (const r of catalog.routes) {
+    const label = routeLabel(r.description ?? "", r.slug);
+    n.set(label, (n.get(label) ?? 0) + 1);
+  }
+  return n;
+})();
 
 /** Built once per isolate from the committed catalog. */
 const ROWS: Row[] = catalog.routes.map((r) => ({
@@ -79,6 +94,8 @@ const ROWS: Row[] = catalog.routes.map((r) => ({
   tier: r.tier || "Unrated",
   category: r.category || "other",
   description: routeLabel(r.description ?? "", r.slug),
+  len: routeLabel(r.description ?? "", r.slug).length,
+  shared: SHARED.get(routeLabel(r.description ?? "", r.slug)) ?? 1,
   hay: `${searchText(r.description ?? "", r.slug)} ${r.service} ${r.slug.replace(/-/g, " ")} ${r.category ?? ""}`.toLowerCase(),
 }));
 
@@ -114,7 +131,11 @@ export function shortlist(intent: string, opts: ResolveOptions = {}): { terms: s
     if (opts.maxPrice != null && row.priceUsd > opts.maxPrice) continue;
     if (opts.method && row.method !== opts.method) continue;
     if (opts.down?.has(row.slug)) continue; // do not sell what we will refuse
-    const s = scoreMatch({ hay: row.hay, tier: row.tier, priceUsd: row.priceUsd }, terms, weights);
+    const s = scoreMatch(
+      { hay: row.hay, tier: row.tier, priceUsd: row.priceUsd, len: row.len, shared: row.shared },
+      terms,
+      weights
+    );
     if (s.score > 0) scored.push({ ...row, s });
   }
   scored.sort(
@@ -123,7 +144,19 @@ export function shortlist(intent: string, opts: ResolveOptions = {}): { terms: s
       (TIER_RANK[a.tier] ?? 4) - (TIER_RANK[b.tier] ?? 4) ||
       a.priceUsd - b.priceUsd
   );
-  return { terms, rows: scored.slice(0, SHORTLIST) };
+  // Diversity: one seller must not occupy the shortlist. Without this, a
+  // service with several near-identical routes takes the top slots and the
+  // caller sees one option dressed as three.
+  const perService = new Map<string, number>();
+  const diverse: typeof scored = [];
+  for (const row of scored) {
+    const n = perService.get(row.service) ?? 0;
+    if (n >= MAX_PER_SERVICE) continue;
+    perService.set(row.service, n + 1);
+    diverse.push(row);
+    if (diverse.length >= SHORTLIST) break;
+  }
+  return { terms, rows: diverse };
 }
 
 function toCandidate(r: Row & { s: ReturnType<typeof scoreMatch> }): ResolveCandidate {

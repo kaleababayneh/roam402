@@ -146,6 +146,40 @@ export interface Matchable {
   hay: string;
   tier: string;
   priceUsd: number;
+  /** Length of the DISPLAYED description, for specificity (see below). */
+  len?: number;
+  /** How many routes wear this exact description. 1 = unique to this one. */
+  shared?: number;
+}
+
+/** Median displayed-label length in the catalog, for length normalisation. */
+const TYPICAL_LEN = 88;
+/**
+ * Below this, brevity stops being evidence of focus. "Text-to-Image
+ * Generation" is specific; "Asrai" is just short, and without a floor it
+ * scored higher than either for saying almost nothing.
+ */
+const MIN_INFORMATIVE_LEN = 30;
+
+/**
+ * How much a match in this route's text is worth believing.
+ *
+ * Two terms landing in "Text-to-Image Generation" is a hit. The same two terms
+ * landing in a 240-character menu — "…marketplace on Base (USDC): cc0 image
+ * generation, market-data digests, and…" — is a coincidence of breadth: that
+ * seller lists everything it does on every route it owns, so any query about
+ * anything it mentions matches all of them equally. Two corrections:
+ *
+ *   specificity — long text dilutes a match (standard length normalisation)
+ *   uniqueness  — a description worn by several routes of one service is a
+ *                 menu, not a description of THIS endpoint (537 of 2,500
+ *                 routes share their text with a sibling)
+ */
+function believability(row: Matchable): number {
+  const len = Math.max(MIN_INFORMATIVE_LEN, row.len ?? TYPICAL_LEN);
+  const specificity = 1 / (1 + Math.log10(1 + len / TYPICAL_LEN));
+  const uniqueness = 1 / (1 + 0.35 * Math.max(0, (row.shared ?? 1) - 1));
+  return specificity * uniqueness;
 }
 
 /**
@@ -208,10 +242,11 @@ export function scoreMatch(
   }
   if (!exact.length && !viaAlias.length) return { score: 0, exact, viaAlias };
 
-  // Coverage weighted by how much each matched term actually narrows things.
-  const coverage = total > 0 ? hit / total : 0;
+  // Coverage weighted by how much each matched term actually narrows things,
+  // then by how much this route's text is worth believing at all.
+  const coverage = (total > 0 ? hit / total : 0) * believability(row);
   const trust = (4 - (TIER_RANK[row.tier] ?? 4)) / 4; // 0..1
-  // Cheaper is a mild plus; log-scaled so a $0.000001 route cannot win on price.
+  // Cheaper is a mild plus, log-scaled so a $0.000001 route cannot win on price.
   const cheap = 1 / (1 + Math.log10(1 + row.priceUsd * 1_000_000));
   return { score: coverage * 0.8 + trust * 0.15 + cheap * 0.05, exact, viaAlias };
 }

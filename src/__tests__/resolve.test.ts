@@ -144,3 +144,38 @@ describe("resolve — the contract it advertises", () => {
     expect(r.note).toMatch(/does not choose for you/i);
   });
 });
+
+describe("resolve — one seller cannot dress up as three", () => {
+  it("caps how many routes a single service may occupy", () => {
+    for (const intent of ["generate an image", "convert text to speech", "search the web"]) {
+      const counts = new Map<string, number>();
+      for (const r of shortlist(intent).rows) {
+        counts.set(r.service, (counts.get(r.service) ?? 0) + 1);
+      }
+      for (const [service, n] of counts) {
+        expect(n, `${service} took ${n} slots for "${intent}"`).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  it("believes a focused description over a menu that mentions everything", () => {
+    // A seller listing all its capabilities on every route it owns matched any
+    // query about any of them, and outranked a route named for the exact job.
+    const rows = shortlist("generate an image").rows;
+    const top = rows[0];
+    expect(top, "expected candidates").toBeTruthy();
+    // The winner's description should be about images, not a catch-all blurb
+    // that happens to mention them among many other things.
+    expect(top!.description.length).toBeLessThan(140);
+    expect(top!.description.toLowerCase()).toMatch(/image/);
+  });
+
+  it("does not reward a label for being merely short", () => {
+    // Length normalisation is floored: "Asrai" says nothing and must not beat
+    // a real description just by being five characters long.
+    for (const r of shortlist("search the web").rows.slice(0, 3)) {
+      expect(r.description.length, `"${r.description}" is too short to be the answer`)
+        .toBeGreaterThan(8);
+    }
+  });
+});
