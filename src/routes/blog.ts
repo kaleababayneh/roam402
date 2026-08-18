@@ -173,21 +173,39 @@ ${term([
 It is a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO.
 Without it, nothing can pay you.</p>
 
-<h3 id="connect">Connect it to Claude</h3>
+<h3 id="connect">Connect it to your agent</h3>
 
-<p>Claude Code takes one command. It writes the config for you.</p>
+<p>One command, whichever agent you use:</p>
+
+${code("bash", `npx roam402-mcp install`)}
+
+<p>It finds Claude Code, Claude Desktop, Cursor and Codex on your machine and writes each one's
+config in its own format — Claude Code through its CLI at user scope, Cursor and Desktop as
+JSON, Codex as TOML. Servers you already have are left alone, every file it touches is backed
+up first, and running it again reports <em>already configured</em> rather than duplicating
+anything. Add <code>--client cursor</code> to do just one.</p>
+
+<p>Prefer to wire it yourself? Declining the prompt prints the JSON instead — Desktop reads
+<code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, Cursor reads
+<code>.cursor/mcp.json</code>:</p>
 
 ${code(
-  "bash",
-  `claude mcp add roam402 \\
-  -e ROAM_MNEMONIC_FILE=~/.roam402/mainnet.mnemonic \\
-  -e ROAM_NETWORK=mainnet \\
-  -- npx roam402-mcp`
+  "claude_desktop_config.json",
+  `{
+  "mcpServers": {
+    "roam402": {
+      "command": "npx",
+      "args": ["roam402-mcp"],
+      "env": {
+        "ROAM_MNEMONIC_FILE": "~/.roam402/mainnet.mnemonic",
+        "ROAM_NETWORK": "mainnet"
+      }
+    }
+  }
+}`
 )}
 
-<p>Claude Desktop and Cursor take the JSON above. Desktop reads
-<code>~/Library/Application Support/Claude/claude_desktop_config.json</code> and Cursor reads
-<code>.cursor/mcp.json</code>. Restart the app and the tools appear.</p>
+<p>Restart the app and the tools appear.</p>
 
 <h3 id="tools">The seven tools</h3>
 
