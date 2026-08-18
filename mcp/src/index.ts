@@ -31,9 +31,31 @@ import { runSetupWizard } from "./setup.js";
 import { runInstall } from "./install.js";
 import { optInToUsdc, walletStatus } from "./wallet.js";
 
+const VERSION = "0.3.1";
+
 const cfg = loadMcpConfig(process.env);
 const argv = process.argv.slice(2);
 const flag = (...names: string[]) => names.some((n) => argv.includes(n));
+
+// An unrecognised flag used to fall through and start the stdio server, so
+// `npx roam402-mcp --version` looked like a frozen terminal. Anything that
+// looks like a flag we do not know is now an error, not a silent server.
+const KNOWN_FLAGS = new Set([
+  "--help", "-h", "--version", "-v", "--status", "--optin", "--yes", "-y", "--client",
+]);
+const unknown = argv.filter((a, i) => a.startsWith("-") && !KNOWN_FLAGS.has(a) && argv[i - 1] !== "--client");
+if (unknown.length) {
+  console.error(
+    `roam402-mcp: unknown option ${unknown[0]}\n` +
+      `Run \`npx roam402-mcp --help\` to see what exists.`
+  );
+  process.exit(1);
+}
+
+if (flag("--version", "-v")) {
+  console.log(VERSION);
+  process.exit(0);
+}
 
 if (flag("--help", "-h")) {
   console.log(`roam402-mcp — the x402 economy for your agent, paid in USDC on Algorand.
@@ -46,6 +68,11 @@ if (flag("--help", "-h")) {
   npx roam402-mcp --optin      opt this wallet in to USDC — REQUIRED once before
                                it can receive any. Needs ~0.21 ALGO first.
   npx roam402-mcp --help
+  npx roam402-mcp --version
+
+Install flags:
+  --client <claude-code|claude-desktop|cursor|codex>   wire just one client
+  --yes                                                skip the confirmation
 
 Wallet:  ROAM_MNEMONIC_FILE=<path to a file holding 25 words>   (preferred)
          ROAM_MNEMONIC="<25 words>"
@@ -119,7 +146,7 @@ if (cfg.mnemonic) {
 
 const roam = createRoamClient({ signer, network: cfg.network, gatewayUrl: cfg.gatewayUrl });
 
-const server = new McpServer({ name: "roam402", version: "0.3.0" });
+const server = new McpServer({ name: "roam402", version: VERSION });
 registerTools(server, roam, cfg, signer?.address);
 
 await server.connect(new StdioServerTransport());

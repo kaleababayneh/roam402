@@ -205,49 +205,47 @@ ${chat([
     who: "tool",
     name: "roam_resolve",
     args: '{ intent: "convert text to speech", limit: 3 }',
-    result: `SHORTLIST for "convert text to speech" (24 matched):
+    result: `SHORTLIST for "convert text to speech" (31 matched):
   1. xonaagent-audio-x-text-to-speech · $0.01 · xona-agent.com (Corroborated)
        X.AI text-to-speech: convert text to speech (MP3) (Base Mainnet).
-  2. jarvisclaw-audio-speech · $0.001 · jarvisclaw.ai (Corroborated)
-       AI text-to-speech - natural voice synthesis with multiple voices
-  3. jarvisclaw-audio-transcriptions · $0.001 · jarvisclaw.ai (Corroborated)
-       AI speech-to-text - Whisper-powered audio transcription`,
+  2. x402factory-base-tts · $0.009 · x402factory.ai (Corroborated)
+       Base text-to-speech API paid via x402. Converts text input into audio.
+  3. glianalabs-x402-gemini-31-flash-tts · $0.0001 · glianalabs.com (Established)
+       GlianaAI pay-per-call AI. Gemini 3.1 Flash TTS.`,
   },
   {
     who: "claude",
-    text: "Three options. The cheapest text-to-speech is <b>jarvisclaw-audio-speech</b> at $0.001 a call, from a Corroborated seller. Let me check what it needs.",
+    text: "Three options. The cheapest is <b>glianalabs-x402-gemini-31-flash-tts</b> at $0.0001 a call, thirty times cheaper than the top hit. Let me check what it needs.",
   },
   {
     who: "tool",
     name: "roam_schema",
-    args: '{ slug: "jarvisclaw-audio-speech" }',
-    result: `POST /r/jarvisclaw-audio-speech  [source: origin-402]
+    args: '{ slug: "glianalabs-x402-gemini-31-flash-tts" }',
+    result: `POST /r/glianalabs-x402-gemini-31-flash-tts  [source: origin-402]
 BODY EXAMPLE:
 {
-  "model": "tts-1",
-  "input": "Hello from roam402",
-  "voice": "alloy"
+  "text": "Hello from GlianaAI."
 }
-NOTE: AI text-to-speech - natural voice synthesis with multiple
-voices, pay per request with USDC`,
+NOTE: GlianaAI pay-per-call AI. LLM chat, image, video, music,
+speech. 90+ models, no signup.`,
   },
   {
     who: "claude",
-    text: "It takes <code>model</code>, <code>input</code> and <code>voice</code>. Shall I call it with your text at $0.001?",
+    text: "It takes one field, <code>text</code>. Shall I call it with your text at $0.0001?",
   },
   { who: "user", text: "yes, go ahead" },
   {
     who: "tool",
     name: "roam_call",
-    args: '{ slug: "jarvisclaw-audio-speech", json_body: { … } }',
+    args: '{ slug: "glianalabs-x402-gemini-31-flash-tts", json_body: { … } }',
     result: `200 OK · audio returned
-paid $0.001 USDC on Algorand
+paid $0.0001 USDC on Algorand
 receipts: algorand ✓  origin ✓`,
   },
 ])}
 
 <p>Nothing was spent until the last step, and the agent asked first. Resolve cost $0.0005.
-The schema was free. The call cost a tenth of a cent.</p>
+The schema was free. The call cost a hundredth of a cent.</p>
 
 <h2 id="sdk">The SDK</h2>
 
@@ -271,14 +269,14 @@ const roam = createRoamClient({
 });
 
 // Say what you need. Returns candidates, buys nothing ($0.0005)
-const { candidates } = await roam.resolve("transcribe an audio file", { limit: 3 });
+const { candidates } = await roam.resolve("convert text to speech", { limit: 3 });
 
 // Learn what the best one expects. Free
 const inputs = await roam.schema(candidates[0].path);
 
 // Call it. The 402 is paid for you.
-const res = await roam.call("jarvisclaw-audio-transcriptions", {
-  body: { url: "https://example.com/clip.mp3" },
+const res = await roam.call("glianalabs-x402-gemini-31-flash-tts", {
+  body: { text: "Hello from roam402" },
 });
 console.log(await res.json());`
 )}

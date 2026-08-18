@@ -265,6 +265,14 @@ export function registerTools(
         ];
         return ok(clip(lines.join("\n")));
       } catch (err) {
+        // Slugs have to be discovered, so "no such route" is the single most
+        // likely error here. Answer it with the next step instead of a URL.
+        if (/404|unknown_route|no such route/i.test(String(err))) {
+          return ok(
+            `No route named "${slug}". Slugs come from roam_catalog — search it ` +
+              `for what you need and use the path it returns, without the /r/ prefix.`
+          );
+        }
         return fail(err);
       }
     }
@@ -275,7 +283,7 @@ export function registerTools(
     {
       title: "Opt this wallet in to USDC (required before it can be paid)",
       description:
-        "FREE (costs ~0.001 ALGO in network fees). An Algorand account cannot RECEIVE an asset it has not opted into, so a new wallet must do this once before anyone sends it USDC. Sends the 0-amount self-transfer that constitutes the opt-in. Idempotent: reports and does nothing if already opted in. Requires a little ALGO in the wallet first.",
+        "COSTS ~0.001 ALGO in network fees (no USDC). An Algorand account cannot RECEIVE an asset it has not opted into, so a new wallet must do this once before anyone sends it USDC. Sends the 0-amount self-transfer that constitutes the opt-in. Idempotent: reports and does nothing if already opted in. Requires a little ALGO in the wallet first.",
       inputSchema: {},
     },
     async () => {

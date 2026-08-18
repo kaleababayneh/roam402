@@ -42,6 +42,8 @@ interface Client {
   label: string;
   /** Where the change lands, for display. */
   where: string;
+  /** True when apply() writes the file itself and can therefore back it up. */
+  backsUp: boolean;
   /** True when this client looks installed on this machine. */
   detect(): boolean;
   /** Returns a human line describing what happened. */
@@ -113,6 +115,8 @@ function clients(): Client[] {
       id: "claude-code",
       label: "Claude Code",
       where: "via the claude CLI",
+      // The CLI owns the write, so there is nothing for us to copy first.
+      backsUp: false,
       detect: () => hasCommand("claude"),
       apply(env) {
         // Its config is large and CLI-owned; let the CLI write it. Scope
@@ -133,6 +137,7 @@ function clients(): Client[] {
     },
     {
       id: "claude-desktop",
+      backsUp: true,
       label: "Claude Desktop",
       where: desktop,
       // The app may be installed before it has ever written a config.
@@ -141,6 +146,7 @@ function clients(): Client[] {
     },
     {
       id: "cursor",
+      backsUp: true,
       label: "Cursor",
       where: cursor,
       detect: () => existsSync(cursor) || hasCommand("cursor"),
@@ -148,6 +154,7 @@ function clients(): Client[] {
     },
     {
       id: "codex",
+      backsUp: true,
       label: "Codex CLI",
       where: codex,
       detect: () => existsSync(codex) || hasCommand("codex"),
@@ -223,6 +230,12 @@ ${configSnippetFor(opts.network)}
 
   stdout.write(`\n${B("roam402-mcp install")} — wiring the gateway into your agent(s):\n\n`);
   for (const c of chosen) stdout.write(`  • ${B(c.label)} ${DIM(c.where)}\n`);
+  stdout.write(
+    `\n  network  ${B(opts.network)}` +
+      (opts.network === "mainnet" ? ` ${WARN("(real funds)")}` : ` ${DIM("(test funds)")}`) +
+      `\n` +
+      (env.ROAM_MNEMONIC_FILE ? `  wallet   ${DIM(env.ROAM_MNEMONIC_FILE)}\n` : "")
+  );
   if (!env.ROAM_MNEMONIC_FILE) {
     stdout.write(
       `\n${WARN("No wallet found")} — the free tools will work; run ${B("npx roam402-mcp")}\n` +
@@ -259,10 +272,18 @@ ${configSnippetFor(opts.network)}
     }
   }
 
+  // Only claim a backup for files we wrote ourselves.
+  const backed = chosen.filter((c) => c.backsUp);
   stdout.write(
     `\n${OK("Done.")} Restart the app(s) you just configured, then ask:\n` +
       `  ${DIM('"what can I buy through roam402?"')}\n` +
-      `${DIM("Existing servers were left untouched; each edited file has a .bak- copy.")}\n`
+      `${DIM("Existing servers were left untouched.")}` +
+      (backed.length ? `${DIM(" Files we edited have a .bak- copy.")}` : "") +
+      (chosen.some((c) => !c.backsUp)
+        ? `\n${DIM("Claude Code was written by its own CLI, so there is no .bak- for it —")}` +
+          `\n${DIM("undo with: claude mcp remove roam402 --scope user")}`
+        : "") +
+      "\n"
   );
   return failures > 0 ? 1 : 0;
 }

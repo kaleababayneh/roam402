@@ -1,8 +1,8 @@
 # roam402-mcp
 
 MCP server for [Roam402](https://roam402.com): give any tool-calling agent
-(Claude, Cursor, anything MCP) the whole x402 economy — 2,349 routes across
-751 verified services — paid in USDC on Algorand mainnet. Five tools, one
+(Claude, Cursor, anything MCP) the whole x402 economy — 2,500 routes across
+837 verified services — paid in USDC on Algorand mainnet. eight tools, one
 config block, no code.
 
 ```json
@@ -22,6 +22,15 @@ config block, no code.
 
 | Tool | Cost | What it does |
 |---|---|---|
+| `roam_resolve` | $0.0005 | Describe what you need in plain English, get a ranked shortlist. Suggests only, never calls or pays |
+| `roam_catalog` | free | Browse or search every callable route, with filters and paging |
+| `roam_schema` | free | What inputs a route expects, read from the origin's own payment challenge |
+| `roam_call` | per route | Calls a route. Pays the 402 and returns the body plus receipts |
+| `roam_trust` | $0.0005 | Trust report for a seller domain |
+| `roam_precheck` | $0.0002 | Vets any x402 URL before you pay it |
+| `roam_optin` | ALGO fees | Opts the wallet in to USDC, required once before it can receive any |
+| `roam_balance` | free | The paying wallet's ALGO and USDC balance |
+
 ### Connecting it to your agent
 
 ```
@@ -54,14 +63,6 @@ creating one and prints the config to paste into your agent host. Without a
 wallet the server still starts read-only: `roam_catalog` and `roam_schema`
 work, and the paid tools tell you what is missing.
 
-| `roam_resolve` | $0.0005 | Describe what you need in plain English → a ranked shortlist of routes. Suggests only; never calls or pays for them |
-| `roam_catalog` | free | Browse every callable service: routes, USDC prices, trust tiers. Paged — filter by search/category/service/tier/method/max_price |
-| `roam_schema` | free | What inputs a route expects, probed from the origin's own x402 challenge — call before `roam_call` |
-| `roam_balance` | free | The paying wallet's ALGO + USDC balance |
-| `roam_optin` | fees only | Opt the wallet in to USDC — required once before it can receive any |
-| `roam_trust` | $0.0005 | Agents-Trust trust report for any x402 seller domain |
-| `roam_precheck` | $0.0002 | Safety check before paying an unknown x402 endpoint |
-| `roam_call` | per route | Call any wrapped service (LLM inference, token scans, market data…) with dual-chain receipts |
 
 Custody: the mnemonic stays in the MCP host's env and signs locally — only
 signed payment payloads leave the process. Paid results include settlement
