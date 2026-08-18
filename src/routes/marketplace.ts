@@ -7,13 +7,14 @@
  * instantly.
  *
  * Search runs ENTIRELY in the browser over a compact index inlined in the page
- * (~68KB gzipped for all 2,349 routes). No query round-trips, no vector store:
+ * (tens of KB gzipped for the whole catalog). No query round-trips, and no
+ * vector store:
  *
  *   - The census already classified every service into a category, so the
  *     semantic layer exists as a clean field — retrieval would re-derive it.
  *   - There is almost nothing to embed. Route descriptions are ~122 chars of
- *     identical boilerplate plus a ~60-char head, and 1,767 of 2,349 heads are
- *     just "METHOD /path on <site title>".
+ *     identical boilerplate plus a ~60-char head, and (measured 2026-08-16)
+ *     three quarters of those heads were just "METHOD /path on <site title>".
  *   - At this corpus size exact filtering is exhaustive and deterministic:
  *     a marketplace must never omit a listing that matches.
  *
@@ -45,6 +46,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   web_search: "Web search",
   identity_kyc: "Identity & KYC",
   blockchain_rpc: "Blockchain RPC",
+  payments_infra: "Payments infra",
+  image_generation: "Image generation",
+  storage_compute: "Storage & compute",
+  gaming: "Gaming",
   other: "Other",
 };
 
@@ -62,6 +67,10 @@ const CATEGORY_ICONS: Record<string, IconName> = {
   web_search: "magnifying-glass",
   identity_kyc: "id-card",
   blockchain_rpc: "server",
+  payments_infra: "circle-nodes",
+  image_generation: "photo-film",
+  storage_compute: "bolt",
+  gaming: "robot",
   other: "shapes",
 };
 

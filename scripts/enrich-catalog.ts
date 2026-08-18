@@ -6,8 +6,8 @@
  *   pnpm catalog:enrich --force         # refetch everything
  *   pnpm catalog:enrich --limit 30      # sample run, for checking yield first
  *
- * WHY: the census gives us a route table, not capability text. 1,767 of 2,349
- * generated descriptions are just "METHOD /path on <site title>", which is
+ * WHY: the census gives us a route table, not capability text. Three quarters of
+ * the generated descriptions were just "METHOD /path on <site title>", which is
  * nothing to search, rank, or explain a purchase with. But an x402 origin
  * publishes a description of the resource inside its own 402 challenge — the
  * same place /schema already reads params from. Asking each origin once, at
@@ -150,6 +150,13 @@ async function main() {
   const existing: Record<string, Enriched> = Object.fromEntries(
     Object.entries(prior).map(([k, v]) => [k, { summary: v.summary ?? null, source: v.source }])
   );
+
+  // A regenerated catalog retires slugs; their summaries describe endpoints
+  // that no longer exist, so drop them rather than let the sidecar drift.
+  const live = new Set(routes.map((r) => r.slug));
+  const orphans = Object.keys(existing).filter((slug) => !live.has(slug));
+  for (const slug of orphans) delete existing[slug];
+  if (orphans.length) console.log(`pruned ${orphans.length} entries for retired routes`);
 
   let todo = routes.filter((r) => force || !existing[r.slug]);
   if (LIMIT > 0) todo = todo.slice(0, LIMIT);

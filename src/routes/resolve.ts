@@ -18,7 +18,7 @@
  *   3. A marketplace whose operator's model silently decides who earns revenue
  *      owes sellers an explanation. Stage 1 is deterministic and auditable.
  *
- * TWO STAGES. Stage 1 filters 2,349 routes to a handful with the same matcher
+ * TWO STAGES. Stage 1 filters the whole catalog to a handful with the same matcher
  * the marketplace search uses — free, deterministic, exhaustive. Stage 2 asks a
  * small model to reorder ONLY those, so cost and context stay bounded and the
  * model never sees the catalog. If the model is unavailable or answers badly,

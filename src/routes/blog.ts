@@ -12,6 +12,7 @@ import type { AppEnv } from "../lib/appEnv";
 import type { Config } from "../config";
 import { shell } from "../lib/shell";
 import { icon } from "../lib/icons";
+import { catalog } from "../catalog";
 
 interface Post {
   slug: string;
@@ -76,7 +77,8 @@ const GETTING_STARTED: Post = {
   tags: ["mcp", "sdk", "algorand", "x402"],
   body: `
 <p class="rx-lede">Roam402 is a roaming gateway for the x402 economy. Your agent pays once, in
-USDC on Algorand, and calls any of ${"2,349"} verified services that live on other chains —
+USDC on Algorand, and calls any of ${catalog.routes.length.toLocaleString("en-US")} verified
+routes that live on other chains —
 Base, Solana, Ethereum — getting a receipt from both chains with every response.</p>
 
 <p>There are two ways in. The <strong>MCP server</strong> gives any agent host (Claude Code,

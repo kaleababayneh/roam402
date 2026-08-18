@@ -5,8 +5,8 @@
  * Every catalog description ends in the same ~122-character tail ("· via
  * Roam402 from <service> (<tier> on Agents-Trust) · pay USDC on Algorand,
  * fulfilled on Base, dual-chain receipts."). It is true for every route, it is
- * already stated once in the catalog header, and repeating it 2,349 times is
- * roughly 287KB of payload that tells a reader nothing new — the single
+ * already stated once in the catalog header, and repeating it once per route is
+ * hundreds of KB of payload that tells a reader nothing new — the single
  * biggest waste in an agent's context window.
  *
  * routeLabel() keeps only the part that differs. Shared by /marketplace (card
@@ -91,8 +91,8 @@ export function searchText(description: string, slug: string): string {
 
 /**
  * Fallback display name for routes whose description head is just the
- * service's own page title — 1,767 of 2,349 of them, which would render four
- * identical "Ottoai" cards. Slugs are generated as
+ * service's own page title — three quarters of them when measured — which
+ * would render four identical "Ottoai" cards. Slugs are generated as
  * "<service-label>-<endpoint-path>", so dropping the service prefix leaves the
  * part that actually differs.
  */

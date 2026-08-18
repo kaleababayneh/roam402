@@ -65,7 +65,7 @@ export interface HealthSummary {
   live: number;
   reachable: number;
   down: number;
-  /** Which rotating slice this run covered, e.g. "200-320/2349". */
+  /** Which rotating slice this run covered, e.g. "200-320/2500". */
   slice?: string;
   /** Routes in the slice we never got to (budget ran out) — NOT failures. */
   skipped?: number;
@@ -195,7 +195,7 @@ async function readHealth(kv: KVNamespace, slug: string): Promise<RouteHealth | 
 
 /**
  * Maintain the compact refusal list. Discovery surfaces read this ONCE to know
- * what not to recommend — 2,349 individual reads is not an option on the
+ * what not to recommend — one read per route is not an option on the
  * request path.
  */
 async function updateDownList(kv: KVNamespace, fresh: Map<string, RouteHealth>): Promise<number> {
