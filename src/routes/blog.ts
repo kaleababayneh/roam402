@@ -24,15 +24,12 @@ interface Post {
   body: string;
 }
 
-/** Package versions this post was written against — bump with a release. */
-const VERSIONS = { mcp: "0.2.1", sdk: "0.2.1" };
-
 const fmtDate = (iso: string): string =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
 /** Terminal transcript, rendered as a macOS-style window. `out` lines are
  *  muted, `cmd` lines get the prompt. */
-const term = (lines: [kind: "cmd" | "out" | "note", text: string][], title = "zsh — roam402"): string =>
+const term = (lines: [kind: "cmd" | "out" | "note", text: string][], title = "zsh · roam402"): string =>
   `<div class="rx-term"><div class="rx-term-bar"><span class="rx-term-dot rx-dot-r"></span><span class="rx-term-dot rx-dot-y"></span><span class="rx-term-dot rx-dot-g"></span><span class="rx-term-title">${title}</span></div><div class="rx-term-body">${lines
     .map(([k, t]) =>
       k === "cmd"
@@ -107,24 +104,8 @@ ${term([
 ])}
 
 <p>The key goes to a file with <code>0600</code> permissions instead of your terminal, because
-scrollback ends up in screenshots and pasted chats. The config you give your agent host holds
-a <em>path</em>, not a secret.</p>
-
-${code(
-  "claude_desktop_config.json",
-  `{
-  "mcpServers": {
-    "roam402": {
-      "command": "npx",
-      "args": ["roam402-mcp"],
-      "env": {
-        "ROAM_MNEMONIC_FILE": "~/.roam402/mainnet.mnemonic",
-        "ROAM_NETWORK": "mainnet"
-      }
-    }
-  }
-}`
-)}
+scrollback ends up in screenshots and pasted chats. Nothing that references it ever holds the
+words themselves, only the path.</p>
 
 <h3 id="funding">Fund it in the right order</h3>
 
@@ -158,9 +139,8 @@ ${term([
   ["out", "USDC      0.1"],
 ])}
 
-<p class="rx-note-inline">The <code>--optin</code> and <code>--status</code> commands landed in
-<code>roam402-mcp@0.2.1</code>. An older copy will not recognise them. Run
-<code>npx roam402-mcp@latest --optin</code> to be sure.</p>
+<p class="rx-note-inline">An older copy of the package will not recognise these commands.
+Running <code>npx roam402-mcp@latest</code> always fetches the current release.</p>
 
 <p>That opt-in is <a href="https://allo.info/tx/KOLPQ75YMEFJGNTOUR7MN6NYCOXEX6LR2LKRL2HGQVPRLXSIGATA" target="_blank" rel="noopener noreferrer">on mainnet</a>.
 It is a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO.
@@ -168,19 +148,19 @@ Without it, nothing can pay you.</p>
 
 <h3 id="connect">Connect it to your agent</h3>
 
-<p>One command, whichever agent you use:</p>
+<p>One command works for every agent.</p>
 
 ${code("bash", `npx roam402-mcp install`)}
 
 <p>It finds Claude Code, Claude Desktop, Cursor and Codex on your machine and writes each one's
-config in its own format — Claude Code through its CLI at user scope, Cursor and Desktop as
-JSON, Codex as TOML. Servers you already have are left alone, every file it touches is backed
-up first, and running it again reports <em>already configured</em> rather than duplicating
-anything. Add <code>--client cursor</code> to do just one.</p>
+config in its own format. Claude Code goes through its CLI at user scope, Cursor and Desktop
+get JSON, Codex gets TOML. Servers you already have are left alone, every file it touches is
+backed up first, and running it again reports <em>already configured</em> rather than
+duplicating anything. Add <code>--client cursor</code> to do just one.</p>
 
-<p>Prefer to wire it yourself? Declining the prompt prints the JSON instead — Desktop reads
-<code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, Cursor reads
-<code>.cursor/mcp.json</code>:</p>
+<p>Prefer to wire it yourself? Declining the prompt prints the JSON instead. Desktop reads
+<code>~/Library/Application Support/Claude/claude_desktop_config.json</code> and Cursor reads
+<code>.cursor/mcp.json</code>.</p>
 
 ${code(
   "claude_desktop_config.json",
@@ -280,7 +260,7 @@ answered, signed and retried without you seeing it.</p>
 
 ${code(
   "bash",
-  `npm i roam402          # ${VERSIONS.sdk}
+  `npm i roam402
 # algosdk is a peer dependency when you sign from a mnemonic
 npm i algosdk`
 )}
@@ -314,7 +294,7 @@ ${code(
   "typescript",
   `const readOnly = createRoamClient({ network: "mainnet" });
 
-// Paged: 25 routes per call, with total and next
+// Paged, 25 routes per call, with total and next
 const page = await readOnly.catalog({ q: "speech", maxPrice: 0.01, method: "POST" });
 console.log(page.total, page.wrapped.length, page.next);
 
