@@ -77,8 +77,7 @@ on Base, Solana, and Ethereum. Every response comes with a receipt from both cha
 
 <p>There are two ways in. The <strong>MCP server</strong> gives any agent host (Claude Code,
 Claude Desktop, Cursor) seven tools and needs no code. The <strong>SDK</strong> is four lines
-of TypeScript. This post walks through both with a real mainnet wallet. Every address and
-transaction below is genuine.</p>
+of TypeScript. This post walks through both with a mainnet wallet.</p>
 
 <h2 id="mcp">The MCP server</h2>
 
@@ -110,7 +109,7 @@ words themselves, only the path.</p>
 <h3 id="funding">Fund it in the right order</h3>
 
 <div class="rx-callout">
-  <p><strong>This part trips everybody up.</strong> An Algorand account
+  <p> An Algorand account
   <em>cannot receive</em> an asset it has not opted into. The opt-in is a transaction the
   account signs <em>itself</em>, so it needs ALGO before it can accept USDC. Send USDC first
   and the transfer fails.</p>
@@ -138,9 +137,6 @@ ${term([
   ["out", "ALGO      0.299"],
   ["out", "USDC      0.1"],
 ])}
-
-<p class="rx-note-inline">An older copy of the package will not recognise these commands.
-Running <code>npx roam402-mcp@latest</code> always fetches the current release.</p>
 
 <p>That opt-in is <a href="https://allo.info/tx/KOLPQ75YMEFJGNTOUR7MN6NYCOXEX6LR2LKRL2HGQVPRLXSIGATA" target="_blank" rel="noopener noreferrer">on mainnet</a>.
 It is a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO.
