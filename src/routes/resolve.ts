@@ -88,6 +88,12 @@ export interface ResolveOptions {
   method?: string | null;
   /** Set false to skip the model even when it is available (tests, debugging). */
   rank?: boolean;
+  /**
+   * Slugs the guard will refuse before payment. Recommending one of these is
+   * the worst thing this endpoint can do: the caller picks it, pays nothing,
+   * and gets a 503 for a route we suggested.
+   */
+  down?: ReadonlySet<string>;
 }
 
 /* ── Stage 1: deterministic shortlist ─────────────────────────────────────── */
@@ -107,6 +113,7 @@ export function shortlist(intent: string, opts: ResolveOptions = {}): { terms: s
   for (const row of ROWS) {
     if (opts.maxPrice != null && row.priceUsd > opts.maxPrice) continue;
     if (opts.method && row.method !== opts.method) continue;
+    if (opts.down?.has(row.slug)) continue; // do not sell what we will refuse
     const s = scoreMatch({ hay: row.hay, tier: row.tier, priceUsd: row.priceUsd }, terms, weights);
     if (s.score > 0) scored.push({ ...row, s });
   }
@@ -230,6 +237,8 @@ export interface ResolveResult {
   terms: string[];
   ranked_by: "model" | "heuristic";
   total_matches: number;
+  /** Matches withheld because the gateway would refuse them right now. */
+  excluded_unavailable?: number;
   candidates: ResolveCandidate[];
   next_step: string;
   note: string;
@@ -242,6 +251,10 @@ export async function resolve(
 ): Promise<ResolveResult> {
   const want = Math.min(MAX_RETURN, Math.max(1, Math.floor(opts.limit ?? DEFAULT_RETURN)));
   const { terms, rows } = shortlist(intent, opts);
+  // How many the liveness filter removed, so the caller sees it was applied.
+  const withheld = opts.down?.size
+    ? shortlist(intent, { ...opts, down: undefined }).rows.length - rows.length
+    : 0;
 
   let ranked_by: "model" | "heuristic" = "heuristic";
   let candidates = rows.slice(0, want).map(toCandidate);
@@ -263,6 +276,7 @@ export async function resolve(
     terms,
     ranked_by,
     total_matches: rows.length,
+    ...(withheld > 0 ? { excluded_unavailable: withheld } : {}),
     candidates,
     next_step:
       "Nothing has been charged and no route was called. Pick a path, request it " +

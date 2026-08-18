@@ -17,7 +17,7 @@ import { resolve, cacheKey, RESOLVE_CACHE_TTL_S } from "./resolve";
 import type { ReceiptStore } from "../receipts/store";
 import { censusRows, trustDomain, type TrustDomainRow } from "../lib/census";
 import { catalog } from "../catalog";
-import { getRouteHealth } from "../fulfillment/health";
+import { getRouteHealth, getDownSlugs } from "../fulfillment/health";
 
 export interface NativeRoute {
   path: string;
@@ -202,7 +202,7 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
     await record("/discover");
     // Same paging contract as free /catalog: a buyer paying for discovery must
     // not receive ~250k tokens of route table by default.
-    return c.json(catalogPayload(cfg, queryFromRequest(c.req)));
+    return c.json(catalogPayload(cfg, queryFromRequest(c.req), await getDownSlugs(kv)));
   });
 
   app.get("/resolve", async (c) => {
@@ -221,13 +221,22 @@ export function mountNativeRoutes(app: Hono<AppEnv>, cfg: Config, kv: KVNamespac
       limit: Number(c.req.query("limit")) || undefined,
       maxPrice: Number.isFinite(maxPrice) ? maxPrice : null,
       method: method === "GET" || method === "POST" ? method : null,
+      down: await getDownSlugs(kv),
     };
 
     // Intents repeat; the shortlist for one is stable for hours. Cache before
     // spending an inference call, and treat cache failure as a cache miss.
     const key = cacheKey(intent, opts);
     const cached = await kv?.get(key, "json").catch(() => null);
-    if (cached) return c.json({ ...(cached as object), cached: true });
+    if (cached) {
+      // The shortlist is cached for hours; liveness is not. Re-filter on the
+      // way out so a cached answer can never name a route we would refuse.
+      const hit = cached as { candidates?: { path: string }[] };
+      const candidates = (hit.candidates ?? []).filter(
+        (x) => !opts.down.has(x.path.replace(/^\/r\//, ""))
+      );
+      return c.json({ ...hit, candidates, cached: true });
+    }
 
     const result = await resolve(intent, opts, (c.env as { AI?: Parameters<typeof resolve>[2] }).AI);
     if (result.candidates.length) {

@@ -12,7 +12,7 @@ import { catalog } from "../catalog";
 import { NATIVE_ROUTES } from "./native";
 import { usdString } from "../pricing";
 import { routeLabel, searchText } from "../lib/routeText";
-import { getHealthSummary } from "../fulfillment/health";
+import { getHealthSummary, getDownSlugs } from "../fulfillment/health";
 import { openTripCount } from "../fulfillment/breaker";
 
 /**
@@ -42,6 +42,8 @@ export interface CatalogQuery {
   maxPrice?: number;
   limit?: number | "all";
   offset?: number;
+  /** Drop routes the gateway would refuse right now. */
+  availableOnly?: boolean;
 }
 
 interface CatalogRow {
@@ -52,6 +54,8 @@ interface CatalogRow {
   trust_tier: string;
   category: string;
   description: string;
+  /** Present only when true: the gateway would refuse this before payment. */
+  unavailable?: boolean;
 }
 
 function allRows(): CatalogRow[] {
@@ -93,7 +97,12 @@ function fullStats() {
 }
 
 /** The machine-readable catalog payload — shared by free /catalog and paid /discover. */
-export function catalogPayload(cfg: Config, query: CatalogQuery = {}): Record<string, unknown> {
+export function catalogPayload(
+  cfg: Config,
+  query: CatalogQuery = {},
+  /** Slugs the guard is refusing — marked, and skippable with ?available=1. */
+  down: ReadonlySet<string> = new Set()
+): Record<string, unknown> {
   const q = (query.q ?? "").toLowerCase().trim();
   const category = (query.category ?? "").toLowerCase().trim();
   const service = (query.service ?? "").toLowerCase().trim();
@@ -102,6 +111,12 @@ export function catalogPayload(cfg: Config, query: CatalogQuery = {}): Record<st
   const maxPrice = Number.isFinite(query.maxPrice) ? (query.maxPrice as number) : null;
 
   let rows = allRows();
+  if (down.size) {
+    rows = rows.map((r) =>
+      down.has(r.path.slice(3)) ? { ...r, unavailable: true } : r
+    );
+    if (query.availableOnly) rows = rows.filter((r) => !r.unavailable);
+  }
   const filtered = !!(q || category || service || tier || method || maxPrice != null);
   if (filtered) {
     rows = rows.filter((w) => {
@@ -157,6 +172,7 @@ export function catalogPayload(cfg: Config, query: CatalogQuery = {}): Record<st
     next: nextOffset < total ? `/catalog?${params}` : null,
     hint:
       "Narrow before you page: ?q= ?category= ?service= ?tier= ?method= ?max_price=. " +
+      "Rows the gateway would refuse right now carry unavailable:true; ?available=1 drops them. " +
       `Default page ${DEFAULT_LIMIT}, ?limit= up to ${MAX_LIMIT}, ?limit=all returns all ` +
       `${catalog.routes.length} routes (~1MB — it will fill an agent context). ` +
       "stats.byCategory covers the whole catalog regardless of this page.",
@@ -178,6 +194,7 @@ export function queryFromRequest(req: { query(k: string): string | undefined }):
     maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
     limit: rawLimit === "all" ? "all" : Number(rawLimit) || undefined,
     offset: Number(req.query("offset")) || 0,
+    availableOnly: req.query("available") === "1" || req.query("available") === "true",
   };
 }
 
@@ -199,5 +216,7 @@ export function mountFreeRoutes(app: Hono<AppEnv>, cfg: Config, hasWallet: boole
 
   // /catalog?q=&category=&service=&limit= — server-side filtering so no
   // client ever needs the full list to find one capability.
-  app.get("/catalog", (c) => c.json(catalogPayload(cfg, queryFromRequest(c.req))));
+  app.get("/catalog", async (c) =>
+    c.json(catalogPayload(cfg, queryFromRequest(c.req), await getDownSlugs(kv)))
+  );
 }

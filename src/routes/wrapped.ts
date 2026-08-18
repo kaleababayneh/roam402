@@ -37,6 +37,17 @@ export function buildGuard(cfg: Config, hasWallet: boolean, kv: KVNamespace | un
       const slug = path.slice(3);
       const route = findRoute(slug, cfg.testOriginUrl);
       if (!route) throw new GatewayError(`Unknown route /r/${slug}`, 404, "unknown_route");
+      // The x402 paywall is registered per "METHOD path", so a request using
+      // the OTHER method matched no payment config, skipped the 402 entirely,
+      // and still reached the origin on our wallet — the caller paid nothing
+      // and we paid the seller. Refuse before payment and before fulfilment.
+      if (c.req.method !== route.method) {
+        throw new GatewayError(
+          `/r/${slug} is ${route.method}, not ${c.req.method}`,
+          405,
+          "method_not_allowed"
+        );
+      }
       if (await isOpen(slug, kv)) throw breakerOpenError(slug);
       if (await isOriginDown(kv, slug)) throw breakerOpenError(slug);
       if (!hasWallet) throw new GatewayError("Gateway fulfilment wallet not configured", 503, "no_wallet");
