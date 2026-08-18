@@ -31,6 +31,20 @@ config block, no code.
 | `roam_optin` | ALGO fees | Opts the wallet in to USDC, required once before it can receive any |
 | `roam_balance` | free | The paying wallet's ALGO and USDC balance |
 
+### Getting ALGO
+
+An Algorand account needs 0.21 ALGO before it can hold USDC at all (0.1 to
+exist, 0.1 more per asset, plus fees). On mainnet that is a real asset you buy
+on any exchange listing ALGO and withdraw to the address, choosing the Algorand
+network.
+
+To try it for free, use testnet instead. Set `ROAM_NETWORK=testnet`, run the
+wizard, and fund the address from the faucet at
+https://bank.testnet.algorand.network
+
+Routes cost $0.0001 to a few cents, so a dollar or two of USDC buys thousands
+of calls.
+
 ### Connecting it to your agent
 
 ```
@@ -47,7 +61,7 @@ no client, and declining the prompt prints it too.
 
 ```
 npx roam402-mcp            # creates a wallet, saves it to ~/.roam402/<network>.mnemonic (0600)
-                           # …send it ~0.3 ALGO from any exchange…
+                           # …fund it: see 'Getting ALGO' below…
 npx roam402-mcp --optin    # opt in to USDC — REQUIRED before it can receive any
                            # …send it USDC…
 npx roam402-mcp --status   # address, balances, opt-in state

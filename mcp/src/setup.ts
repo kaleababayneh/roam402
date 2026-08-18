@@ -85,9 +85,11 @@ ${DIM("npx roam402-mcp install)")}
 ${DIM("A path is not a secret. Keeping the key out of the config means it is not")}
 ${DIM("synced, backed up, or pasted into an issue along with your settings.")}
 
-You can also start the server with no wallet at all — the free tools
-(roam_catalog, roam_schema) work, and the paid ones will tell you what is
-missing rather than failing mysteriously.
+You can also start the server with no wallet at all. The free tools
+(roam_catalog, roam_schema) work, and the paid ones say what is missing
+rather than failing mysteriously.
+
+Changed your mind? Run ${B("npx roam402-mcp")} again and answer ${B("y")} to have one made.
 `);
       return true;
     }
@@ -132,7 +134,8 @@ ${B("To fund it")} (${network}) ${DIM("— this order matters on Algorand:")}
      ${DIM("No wallet app needed; this signs the 0-amount self-transfer for you.")}
      ${WARN("USDC sent before this step will FAIL")} — an Algorand account cannot
      receive an asset it has not opted into.
-  3. ${B("Send USDC")} to the address above.
+  3. ${B("Send USDC")} to the address above. ${DIM("Routes cost $0.0001 to a few cents,")}
+     ${DIM("so a dollar or two buys thousands of calls.")}
 
   ${DIM("Check progress at any time with")} ${B("npx roam402-mcp --status")}
 

@@ -29,9 +29,9 @@ import { loadMcpConfig, mnemonicProblem } from "./config.js";
 import { registerTools } from "./tools.js";
 import { runSetupWizard } from "./setup.js";
 import { runInstall } from "./install.js";
-import { optInToUsdc, walletStatus } from "./wallet.js";
+import { optInToUsdc, walletStatus, MIN_ALGO_TO_OPT_IN } from "./wallet.js";
 
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 
 const cfg = loadMcpConfig(process.env);
 const argv = process.argv.slice(2);
@@ -111,11 +111,21 @@ if (flag("--status", "--optin")) {
       process.exit(outcome.kind === "underfunded" ? 1 : 0);
     }
     const st = await walletStatus(cfg, address);
+    // Do not send someone to a command we already know will refuse them: with
+    // no ALGO, opting in cannot succeed, so name the actual next step.
+    const next = st.optedIn
+      ? st.usdc === 0
+        ? `${st.usdc}   ready for USDC. Send some to the address above.`
+        : `${st.usdc}`
+      : st.algo < MIN_ALGO_TO_OPT_IN
+        ? `not opted in. Send at least ${MIN_ALGO_TO_OPT_IN} ALGO to the address above first` +
+          (cfg.network === "mainnet" ? ", from any exchange that lists ALGO" : ", from the testnet faucet")
+        : `not opted in. Run: npx roam402-mcp --optin`;
     console.log(
       `address   ${st.address}\n` +
         `network   ${st.network}\n` +
         `ALGO      ${st.algo}\n` +
-        `USDC      ${st.optedIn ? st.usdc : "not opted in — run: npx roam402-mcp --optin"}`
+        `USDC      ${next}`
     );
     process.exit(0);
   } catch (err) {
@@ -153,6 +163,16 @@ await server.connect(new StdioServerTransport());
 
 if (signer) {
   console.error(`roam402-mcp ready · ${cfg.network} · wallet ${signer.address.slice(0, 8)}…`);
+  // A human who runs this again with a wallet already set up gets one line and
+  // then silence, because it is now waiting for JSON-RPC. Say so.
+  if (process.stdin.isTTY) {
+    console.error(
+      `\nThis is the MCP server itself, waiting for an agent to talk to it over stdin.\n` +
+        `Nothing is wrong — it will sit here. Press Ctrl+C, and use:\n` +
+        `  npx roam402-mcp install    connect it to Claude Code, Cursor, Codex\n` +
+        `  npx roam402-mcp --status   check the wallet\n`
+    );
+  }
 } else {
   console.error(
     `roam402-mcp ready · ${cfg.network} · READ-ONLY (${mnemonicProblem(process.env)}) · ` +

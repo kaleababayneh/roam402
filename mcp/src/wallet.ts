@@ -63,9 +63,18 @@ export async function optInToUsdc(cfg: McpConfig, address: string): Promise<OptI
     return {
       kind: "underfunded",
       message:
-        `Not enough ALGO to opt in: this wallet holds ${status.algo} ALGO and needs ` +
-        `~${MIN_ALGO_TO_OPT_IN} (0.1 minimum balance + 0.1 more to hold an asset + fees). ` +
-        `Send ALGO to ${address} first, then opt in again.`,
+        `Not enough ALGO to opt in. This wallet holds ${status.algo} ALGO and needs ` +
+        `${MIN_ALGO_TO_OPT_IN} (0.1 to exist, 0.1 more to hold an asset, plus fees). ` +
+        `Send ALGO to ${address}\n\n` +
+        (cfg.network === "mainnet"
+          ? `ALGO is a real asset you have to buy. Get it from any exchange that ` +
+            `lists ALGO (Coinbase, Kraken, Binance) and withdraw to the address ` +
+            `above, choosing the Algorand network. 1 ALGO is far more than enough.\n\n` +
+            `To try roam402 for free instead, use testnet: set ROAM_NETWORK=testnet, ` +
+            `run the wizard again, and fund it from the Algorand testnet faucet at ` +
+            `https://bank.testnet.algorand.network`
+          : `This is testnet, so the ALGO is free: paste the address into the faucet ` +
+            `at https://bank.testnet.algorand.network and run this again.`),
     };
   }
 

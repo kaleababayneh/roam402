@@ -25,6 +25,9 @@ interface ToolText {
 }
 
 const ok = (text: string): ToolText => ({ content: [{ type: "text", text }] });
+/** A refusal we can explain. Still an error to the host, still readable. */
+const refuse = (text: string): ToolText => ({ isError: true, content: [{ type: "text", text }] });
+
 const fail = (err: unknown): ToolText => ({
   isError: true,
   content: [{ type: "text", text: `roam402 error: ${err instanceof Error ? err.message : String(err)}` }],
@@ -60,7 +63,7 @@ export function registerTools(
   /** undefined → read-only mode. */
   address?: string
 ): void {
-  const needsWallet = () => (address ? null : ok(NO_WALLET));
+  const needsWallet = () => (address ? null : refuse(NO_WALLET));
   server.registerTool(
     "roam_catalog",
     {
@@ -291,9 +294,9 @@ export function registerTools(
       if (missing) return missing;
       try {
         const outcome = await optInToUsdc(cfg, address!);
+        if (outcome.kind === "underfunded") return refuse(outcome.message);
         return ok(
-          outcome.message +
-            (outcome.kind === "done" ? " Run roam_balance to confirm." : "")
+          outcome.message + (outcome.kind === "done" ? " Run roam_balance to confirm." : "")
         );
       } catch (err) {
         return fail(err);
@@ -311,8 +314,8 @@ export function registerTools(
     },
     async () => {
       if (!address) {
-        return ok(
-          "No wallet is configured — there is no balance to report. " +
+        return refuse(
+          "No wallet is configured, so there is no balance to report. " +
             "Set ROAM_MNEMONIC, or run `npx roam402-mcp` in a terminal to create a wallet."
         );
       }
