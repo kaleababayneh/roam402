@@ -11,7 +11,6 @@ import { Hono } from "hono";
 import type { AppEnv } from "../lib/appEnv";
 import type { Config } from "../config";
 import { shell } from "../lib/shell";
-import { icon } from "../lib/icons";
 import { catalog } from "../catalog";
 
 interface Post {
@@ -22,7 +21,6 @@ interface Post {
   /** ISO date; rendered as "17 August 2026". */
   date: string;
   readingMinutes: number;
-  tags: string[];
   body: string;
 }
 
@@ -32,17 +30,18 @@ const VERSIONS = { mcp: "0.2.1", sdk: "0.2.1" };
 const fmtDate = (iso: string): string =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
-/** Terminal transcript. `out` lines are muted, `$` lines are the command. */
-const term = (lines: [kind: "cmd" | "out" | "note", text: string][]): string =>
-  `<div class="rx-term">${lines
+/** Terminal transcript, rendered as a macOS-style window. `out` lines are
+ *  muted, `cmd` lines get the prompt. */
+const term = (lines: [kind: "cmd" | "out" | "note", text: string][], title = "zsh — roam402"): string =>
+  `<div class="rx-term"><div class="rx-term-bar"><span class="rx-term-dot rx-dot-r"></span><span class="rx-term-dot rx-dot-y"></span><span class="rx-term-dot rx-dot-g"></span><span class="rx-term-title">${title}</span></div><div class="rx-term-body">${lines
     .map(([k, t]) =>
       k === "cmd"
-        ? `<div class="rx-term-cmd"><span>$</span> ${t}</div>`
+        ? `<div class="rx-term-cmd"><span>❯</span>${t}</div>`
         : k === "note"
           ? `<div class="rx-term-note">${t}</div>`
           : `<div class="rx-term-out">${t}</div>`
     )
-    .join("")}</div>`;
+    .join("")}</div></div>`;
 
 /** A Claude-style exchange. Tool results below are real output from the live
  *  gateway, not mock-ups — only the prose around them is written. */
@@ -74,7 +73,6 @@ const GETTING_STARTED: Post = {
     "From nothing to a paid API call in five minutes with the roam402 MCP server, the SDK, and the one Algorand detail that trips everybody up.",
   date: "2026-08-17",
   readingMinutes: 5,
-  tags: ["mcp", "sdk", "algorand", "x402"],
   body: `
 <p class="rx-lede">Roam402 is a roaming gateway for the x402 economy. Your agent pays in USDC
 on Algorand and calls any of ${catalog.routes.length.toLocaleString("en-US")} verified routes
@@ -84,11 +82,6 @@ on Base, Solana, and Ethereum. Every response comes with a receipt from both cha
 Claude Desktop, Cursor) seven tools and needs no code. The <strong>SDK</strong> is four lines
 of TypeScript. This post walks through both with a real mainnet wallet. Every address and
 transaction below is genuine.</p>
-
-<p class="rx-versions">Written against
-<a href="https://www.npmjs.com/package/roam402-mcp" target="_blank" rel="noopener noreferrer"><code>roam402-mcp@${VERSIONS.mcp}</code></a> and
-<a href="https://www.npmjs.com/package/roam402" target="_blank" rel="noopener noreferrer"><code>roam402@${VERSIONS.sdk}</code></a>,
-both on npm. <code>npx</code> and <code>npm i</code> pick them up with no version pin.</p>
 
 <h2 id="mcp">The MCP server</h2>
 
@@ -372,16 +365,24 @@ const PROSE_CSS = `<style>
 .rx-post strong{color:#1c1f2e;font-weight:600}
 .rx-callout{margin:22px 0;padding:16px 18px;border:1px solid #fcd34d;border-left-width:3px;background:#fffbeb;border-radius:10px}
 .rx-callout p{margin:0;font-size:15px;color:#78350f}
-.rx-term{margin:20px 0;background:#0d0e15;border:1px solid #23263a;border-radius:14px;padding:16px 18px;overflow-x:auto;font-family:var(--font-mono);font-size:12.5px;line-height:1.75}
-.rx-term-cmd{color:#e4e4e7;white-space:pre}
-.rx-term-cmd span{color:#6366f1;user-select:none;margin-right:6px}
-.rx-term-out{color:#a1a1aa;white-space:pre}
-.rx-term-out b{color:#e4e4e7;font-weight:600}
-.rx-term-out .g{color:#4ade80}
+.rx-term{margin:26px 0;background:linear-gradient(180deg,#181b2e 0%,#0d0f1c 60%);border:1px solid rgba(129,140,248,.18);border-radius:16px;overflow:hidden;box-shadow:0 22px 48px -20px rgba(23,26,63,.55),0 4px 14px rgba(23,26,63,.16),inset 0 1px 0 rgba(255,255,255,.06)}
+.rx-term-bar{display:flex;align-items:center;gap:7px;padding:11px 15px;background:rgba(255,255,255,.035);border-bottom:1px solid rgba(129,140,248,.12)}
+.rx-term-dot{flex:0 0 auto;width:11px;height:11px;border-radius:9999px;box-shadow:inset 0 -1px 1px rgba(0,0,0,.25),inset 0 1px 1px rgba(255,255,255,.35)}
+.rx-dot-r{background:#ff5f57}
+.rx-dot-y{background:#febc2e}
+.rx-dot-g{background:#28c840}
+.rx-term-title{flex:1;text-align:center;padding-right:43px;font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;color:#7d829e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rx-term-body{padding:16px 18px 18px;overflow-x:auto;font-family:var(--font-mono);font-size:12.5px;line-height:1.85}
+.rx-term-cmd{color:#f4f4f6;font-weight:500;white-space:pre}
+.rx-term-cmd span{color:#a5b4fc;user-select:none;margin-right:9px;font-weight:700}
+.rx-term-out{color:#9297b3;white-space:pre}
+.rx-term-out+.rx-term-cmd,.rx-term-note+.rx-term-cmd{margin-top:10px}
+.rx-term-out b{color:#e8e9f2;font-weight:600}
+.rx-term-out .g{color:#34d399}
 .rx-term-out .w{color:#fbbf24}
-.rx-term-note{color:#71717a;font-style:italic;margin:10px 0 2px;white-space:pre-wrap}
-.rx-code-block{position:relative;margin:20px 0;background:#0d0e15;border:1px solid #23263a;border-radius:14px;overflow:hidden}
-.rx-code-lang{position:absolute;top:0;right:0;padding:5px 12px;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#71717a;background:#15161f;border-bottom-left-radius:10px}
+.rx-term-note{color:#6a6f8e;font-style:italic;margin:12px 0 3px;white-space:pre-wrap}
+.rx-code-block{position:relative;margin:20px 0;background:#0d0f1c;border:1px solid rgba(129,140,248,.18);border-radius:14px;overflow:hidden;box-shadow:0 10px 28px -16px rgba(23,26,63,.4)}
+.rx-code-lang{position:absolute;top:0;right:0;padding:5px 12px;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7d829e;background:#161a30;border-bottom-left-radius:10px}
 .rx-code-block pre{margin:0;padding:18px;overflow-x:auto}
 .rx-code-block code{font-family:var(--font-mono);font-size:12.5px;line-height:1.7;color:#d4d4d8;background:none;padding:0}
 .rx-chat{margin:22px 0;border:1px solid hsl(var(--border));border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(13,14,21,.04)}
@@ -406,11 +407,9 @@ const PROSE_CSS = `<style>
 .rx-table td{padding:10px 12px;border-bottom:1px solid rgba(13,14,21,.06);color:#3b3f52;vertical-align:top}
 .rx-table td:first-child{white-space:nowrap}
 .rx-post-meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--font-mono);font-size:12px;color:#8a8fa6;margin-top:10px}
-.rx-tag{display:inline-flex;align-items:center;border:1px solid hsl(var(--border));background:#fff;border-radius:9999px;padding:2px 9px;font-size:10.5px;color:#6b7089}
 a.rx-post-card{display:block;padding:22px 24px;border:1px solid hsl(var(--border));border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(13,14,21,.04);transition:border-color .2s,transform .2s,box-shadow .2s;text-decoration:none}
 .rx-post-card:hover{border-color:#a5b4fc;transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,70,229,.08)}
 .rx-post-card h2{font-size:21px;font-weight:600;color:#1c1f2e;margin:0}
-.rx-versions{font-size:14px;color:#6b7089;padding:12px 16px;background:#f4f5fb;border:1px solid hsl(var(--border));border-radius:10px}
 .rx-note-inline{font-size:14.5px;color:#3b3f52;border-left:3px solid #a5b4fc;padding-left:14px;margin:20px 0}
 .rx-post-card p{font-size:14.5px;color:#6b7089;margin:8px 0 0;line-height:1.6}
 </style>`;
@@ -457,11 +456,9 @@ function postPage(cfg: Config, post: Post): string {
     body: `<main class="mx-auto w-full z-40 relative">
   <div class="w-full mx-auto lg:max-w-screen-xl lg:mx-auto px-4 md:px-12 pt-12 pb-20">
     <article class="rx-post">
-      <a class="text-xs font-mono uppercase tracking-widest text-slate-500 hover:text-slate-700" href="/blog">${icon("arrow-right", 10)} back to blog</a>
-      <h1 class="text-3xl md:text-4xl font-bold !leading-tight mt-4">${post.title}</h1>
+      <h1 class="text-3xl md:text-4xl font-bold !leading-tight">${post.title}</h1>
       <div class="rx-post-meta">
         <span>${fmtDate(post.date)}</span><span>·</span><span>${post.readingMinutes} min read</span>
-        ${post.tags.map((t) => `<span class="rx-tag">${t}</span>`).join("")}
       </div>
       ${post.body}
     </article>
