@@ -71,30 +71,29 @@ const GETTING_STARTED: Post = {
   slug: "give-your-agent-a-wallet",
   title: "Give your agent a wallet",
   summary:
-    "From nothing to a paid API call in about five minutes — the roam402 MCP server, the SDK, and the one Algorand detail that trips everybody up.",
+    "From nothing to a paid API call in five minutes with the roam402 MCP server, the SDK, and the one Algorand detail that trips everybody up.",
   date: "2026-08-17",
-  readingMinutes: 7,
+  readingMinutes: 5,
   tags: ["mcp", "sdk", "algorand", "x402"],
   body: `
-<p class="rx-lede">Roam402 is a roaming gateway for the x402 economy. Your agent pays once, in
-USDC on Algorand, and calls any of ${catalog.routes.length.toLocaleString("en-US")} verified
-routes that live on other chains —
-Base, Solana, Ethereum — getting a receipt from both chains with every response.</p>
+<p class="rx-lede">Roam402 is a roaming gateway for the x402 economy. Your agent pays in USDC
+on Algorand and calls any of ${catalog.routes.length.toLocaleString("en-US")} verified routes
+on Base, Solana, and Ethereum. Every response comes with a receipt from both chains.</p>
 
 <p>There are two ways in. The <strong>MCP server</strong> gives any agent host (Claude Code,
-Claude Desktop, Cursor) seven tools and no code. The <strong>SDK</strong> is four lines of
-TypeScript for when you are building something yourself. This post walks through both, using a
-real wallet on mainnet — every address and transaction below is genuine.</p>
+Claude Desktop, Cursor) seven tools and needs no code. The <strong>SDK</strong> is four lines
+of TypeScript. This post walks through both with a real mainnet wallet. Every address and
+transaction below is genuine.</p>
 
 <p class="rx-versions">Written against
 <a href="https://www.npmjs.com/package/roam402-mcp" target="_blank" rel="noopener noreferrer"><code>roam402-mcp@${VERSIONS.mcp}</code></a> and
 <a href="https://www.npmjs.com/package/roam402" target="_blank" rel="noopener noreferrer"><code>roam402@${VERSIONS.sdk}</code></a>,
-both published on npm — <code>npx</code> and <code>npm i</code> pick them up with no version pin needed.</p>
+both on npm. <code>npx</code> and <code>npm i</code> pick them up with no version pin.</p>
 
-<h2 id="mcp">Part one: the MCP server</h2>
+<h2 id="mcp">The MCP server</h2>
 
-<p>You need an Algorand wallet that holds a little USDC. If you do not have one, the setup
-wizard makes one — no wallet app, no browser extension, nothing to sign up for.</p>
+<p>You need an Algorand wallet with a little USDC. The setup wizard can make one. No wallet
+app, no browser extension, no signup.</p>
 
 ${term([
   ["cmd", "npx roam402-mcp"],
@@ -114,9 +113,9 @@ ${term([
   ["out", "<span class='w'>⚠  That file IS the wallet — anyone who reads it can spend it.</span>"],
 ])}
 
-<p>The key is written to a file with <code>0600</code> permissions rather than printed, because
-25 words in your terminal scrollback end up in screenshots and pasted into chats. The config
-you give your agent host holds a <em>path</em>, not a secret:</p>
+<p>The key goes to a file with <code>0600</code> permissions instead of your terminal, because
+scrollback ends up in screenshots and pasted chats. The config you give your agent host holds
+a <em>path</em>, not a secret.</p>
 
 ${code(
   "claude_desktop_config.json",
@@ -134,29 +133,29 @@ ${code(
 }`
 )}
 
-<h3 id="funding">Funding it, in the order Algorand actually requires</h3>
+<h3 id="funding">Fund it in the right order</h3>
 
 <div class="rx-callout">
-  <p><strong>This is the part that trips everybody up.</strong> An Algorand account
+  <p><strong>This part trips everybody up.</strong> An Algorand account
   <em>cannot receive</em> an asset it has not opted into. The opt-in is a transaction the
   account signs <em>itself</em>, so it needs ALGO before it can accept USDC. Send USDC first
-  and the transfer simply fails.</p>
+  and the transfer fails.</p>
 </div>
 
-<p>So the order is: ALGO, then opt in, then USDC.</p>
+<p>The order is ALGO, then opt in, then USDC.</p>
 
 ${term([
-  ["note", "1. Send ~0.3 ALGO to the address — from any exchange, no wallet app needed."],
+  ["note", "1. Send ~0.3 ALGO to the address from any exchange. No wallet app needed."],
   ["cmd", "npx roam402-mcp --status"],
   ["out", "address   3GE37VSG37CVDA3MZGLOP4TKO7OXFDZLXSPO6CK2KK343C4HV6REUDOJOM"],
   ["out", "network   mainnet"],
   ["out", "ALGO      0.2"],
   ["out", "USDC      not opted in — run: npx roam402-mcp --optin"],
-  ["note", "2. Opt in. 0.2 ALGO is not quite enough, and it says exactly why:"],
+  ["note", "2. Opt in. 0.2 ALGO is not quite enough. The error says why."],
   ["cmd", "npx roam402-mcp --optin"],
   ["out", "Not enough ALGO to opt in: this wallet holds 0.2 ALGO and needs ~0.21"],
   ["out", "(0.1 minimum balance + 0.1 more to hold an asset + fees)."],
-  ["note", "…top it up, then:"],
+  ["note", "Top it up and retry."],
   ["cmd", "npx roam402-mcp --optin"],
   ["out", "<span class='g'>Opted in to USDC (asset 31566704) on mainnet.</span>"],
   ["out", "Transaction KOLPQ75YMEFJGNTOUR7MN6NYCOXEX6LR2LKRL2HGQVPRLXSIGATA"],
@@ -167,16 +166,16 @@ ${term([
 ])}
 
 <p class="rx-note-inline">The <code>--optin</code> and <code>--status</code> commands landed in
-<code>roam402-mcp@0.2.1</code>. On an older copy they will not be recognised — <code>npx</code>
-fetches the current release, or run <code>npx roam402-mcp@latest --optin</code> to be sure.</p>
+<code>roam402-mcp@0.2.1</code>. An older copy will not recognise them. Run
+<code>npx roam402-mcp@latest --optin</code> to be sure.</p>
 
-<p>That opt-in is <a href="https://allo.info/tx/KOLPQ75YMEFJGNTOUR7MN6NYCOXEX6LR2LKRL2HGQVPRLXSIGATA" target="_blank" rel="noopener noreferrer">on mainnet</a>:
-a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO. That is
-all an opt-in is — but without it, nothing can pay you.</p>
+<p>That opt-in is <a href="https://allo.info/tx/KOLPQ75YMEFJGNTOUR7MN6NYCOXEX6LR2LKRL2HGQVPRLXSIGATA" target="_blank" rel="noopener noreferrer">on mainnet</a>.
+It is a 0-amount asset transfer from the account to itself, asset 31566704, fee 0.001 ALGO.
+Without it, nothing can pay you.</p>
 
-<h3 id="connect">Connecting it to Claude</h3>
+<h3 id="connect">Connect it to Claude</h3>
 
-<p>Claude Code takes it as one command — this writes the config for you:</p>
+<p>Claude Code takes one command. It writes the config for you.</p>
 
 ${code(
   "bash",
@@ -186,35 +185,32 @@ ${code(
   -- npx roam402-mcp`
 )}
 
-<p>Claude Desktop and Cursor take the JSON above — Desktop in
-<code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, Cursor in
-<code>.cursor/mcp.json</code>. Restart the app afterwards; the tools appear once the server
-handshakes.</p>
+<p>Claude Desktop and Cursor take the JSON above. Desktop reads
+<code>~/Library/Application Support/Claude/claude_desktop_config.json</code> and Cursor reads
+<code>.cursor/mcp.json</code>. Restart the app and the tools appear.</p>
 
 <h3 id="tools">The seven tools</h3>
-
-<p>Restart your agent host and ask it <em>"what can I buy through roam402?"</em>. It gets:</p>
 
 <div class="rx-table-wrap"><table class="rx-table">
 <thead><tr><th>Tool</th><th>Cost</th><th>What it does</th></tr></thead>
 <tbody>
-<tr><td><code>roam_resolve</code></td><td>$0.0005</td><td>Plain English in, a ranked shortlist of routes out. It suggests — it never calls or pays for them.</td></tr>
-<tr><td><code>roam_catalog</code></td><td>free</td><td>Browse or search everything callable. Paged, with filters for category, tier, method and price.</td></tr>
-<tr><td><code>roam_schema</code></td><td>free</td><td>What inputs a route expects, read from the origin's own payment challenge.</td></tr>
-<tr><td><code>roam_call</code></td><td>per route</td><td>Actually call it. Pays the 402 and returns the body plus receipts.</td></tr>
-<tr><td><code>roam_trust</code></td><td>$0.0005</td><td>Trust report for a seller domain: tier, score, evidence pillars.</td></tr>
-<tr><td><code>roam_precheck</code></td><td>$0.0002</td><td>Vet any x402 URL before paying it, even one not in our catalog.</td></tr>
+<tr><td><code>roam_resolve</code></td><td>$0.0005</td><td>Plain English in, a ranked shortlist out. It never calls or pays.</td></tr>
+<tr><td><code>roam_catalog</code></td><td>free</td><td>Browse or search everything callable, with filters for category, tier, method and price.</td></tr>
+<tr><td><code>roam_schema</code></td><td>free</td><td>What inputs a route expects, read from the origin's payment challenge.</td></tr>
+<tr><td><code>roam_call</code></td><td>per route</td><td>Calls the route. Pays the 402 and returns the body plus receipts.</td></tr>
+<tr><td><code>roam_trust</code></td><td>$0.0005</td><td>Trust report for a seller domain. Tier, score, evidence pillars.</td></tr>
+<tr><td><code>roam_precheck</code></td><td>$0.0002</td><td>Vets any x402 URL before you pay it, even one outside our catalog.</td></tr>
 <tr><td><code>roam_optin</code></td><td>fees only</td><td>The opt-in above, from inside the agent.</td></tr>
 </tbody>
 </table></div>
 
-<p>The natural flow is <code>roam_resolve</code> → <code>roam_schema</code> →
-<code>roam_call</code>: say what you need, learn what the winner expects, call it. Browsing and
-reading schemas cost nothing, so an agent can explore the whole catalog before spending a cent.</p>
+<p>The natural flow is <code>roam_resolve</code>, then <code>roam_schema</code>, then
+<code>roam_call</code>. Browsing and schemas are free, so an agent can explore the whole
+catalog before spending a cent.</p>
 
 <h3 id="conversation">What that looks like</h3>
 
-<p>You do not learn any of these tool names. You describe the job:</p>
+<p>You never learn the tool names. You describe the job.</p>
 
 ${chat([
   { who: "user", text: "I need to turn some text into speech. What can I use, and what will it cost?" },
@@ -263,12 +259,12 @@ receipts: algorand ✓  origin ✓`,
   },
 ])}
 
-<p>Nothing was spent until the last step, and the agent asked first. Resolving cost $0.0005,
-reading the schema cost nothing, and the call itself cost a tenth of a cent.</p>
+<p>Nothing was spent until the last step, and the agent asked first. Resolve cost $0.0005.
+The schema was free. The call cost a tenth of a cent.</p>
 
-<h2 id="sdk">Part two: the SDK</h2>
+<h2 id="sdk">The SDK</h2>
 
-<p>Same gateway, no agent host. The client wraps <code>fetch</code> so a 402 response is
+<p>Same gateway, no agent host. The client wraps <code>fetch</code>. A 402 response is
 answered, signed and retried without you seeing it.</p>
 
 ${code(
@@ -287,10 +283,10 @@ const roam = createRoamClient({
   network: "mainnet",
 });
 
-// Say what you need — returns candidates, buys nothing ($0.0005)
+// Say what you need. Returns candidates, buys nothing ($0.0005)
 const { candidates } = await roam.resolve("transcribe an audio file", { limit: 3 });
 
-// Learn what the best one expects — free
+// Learn what the best one expects. Free
 const inputs = await roam.schema(candidates[0].path);
 
 // Call it. The 402 is paid for you.
@@ -300,9 +296,8 @@ const res = await roam.call("jarvisclaw-audio-transcriptions", {
 console.log(await res.json());`
 )}
 
-<p>Discovery does not need a wallet at all. Leave the signer out and the free endpoints work
-exactly the same, while paid ones throw a clear <em>"no wallet is configured"</em> instead of
-failing somewhere deep in the payment layer:</p>
+<p>Discovery needs no wallet. Leave the signer out and the free endpoints work the same. Paid
+ones throw a clear <em>"no wallet is configured"</em> error.</p>
 
 ${code(
   "typescript",
@@ -312,11 +307,11 @@ ${code(
 const page = await readOnly.catalog({ q: "speech", maxPrice: 0.01, method: "POST" });
 console.log(page.total, page.wrapped.length, page.next);
 
-// Narrow instead of paging — the whole table is ~1MB and will fill a context window
+// Narrow instead of paging. The full table is ~1MB and will fill a context window
 const cheap = await readOnly.catalog({ category: "ai_inference", tier: "Corroborated" });`
 )}
 
-<p>And before paying an endpoint you found somewhere else entirely:</p>
+<p>Vet an endpoint you found somewhere else before paying it.</p>
 
 ${code(
   "typescript",
@@ -326,18 +321,16 @@ const seller  = await roam.trust("blockrun.ai");`
 
 <h2 id="notes">Three things worth knowing</h2>
 
-<p><strong>Your keys never leave the machine.</strong> The mnemonic is read locally, signs
-locally, and only signed payment payloads go over the wire. Roam402 never sees it. Keep it in
-the <code>0600</code> file the wizard writes and out of your agent host's config, out of
-repositories, and out of chat windows.</p>
+<p><strong>Your keys never leave the machine.</strong> The mnemonic signs locally. Only signed
+payment payloads go over the wire, so Roam402 never sees it. Keep it in the <code>0600</code>
+file the wizard writes and out of configs, repositories and chat windows.</p>
 
-<p><strong>Nothing is charged when the origin fails.</strong> Payment is settled after the
-upstream service answers, so a broken endpoint costs you nothing. If a route is down, the
-gateway refuses before payment rather than taking your money and apologising.</p>
+<p><strong>Nothing is charged when the origin fails.</strong> Payment settles after the
+upstream service answers. A broken endpoint costs you nothing. If a route is down, the gateway
+refuses before payment.</p>
 
-<p><strong>Start small.</strong> Median price across the catalog is about a cent, and the
-trust endpoints cost a fraction of that. The wallet in this post was funded with 0.3 ALGO and
-0.1 USDC — enough for hundreds of calls.</p>
+<p><strong>Start small.</strong> Median price across the catalog is about a cent. The wallet
+in this post held 0.3 ALGO and 0.1 USDC, enough for hundreds of calls.</p>
 
 <p class="rx-outro">Browse what is callable in the <a href="/marketplace">marketplace</a>, try a
 route without installing anything in the <a href="/playground">playground</a>, or read the
@@ -396,7 +389,7 @@ const PROSE_CSS = `<style>
 .rx-table td:first-child{white-space:nowrap}
 .rx-post-meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--font-mono);font-size:12px;color:#8a8fa6;margin-top:10px}
 .rx-tag{display:inline-flex;align-items:center;border:1px solid hsl(var(--border));background:#fff;border-radius:9999px;padding:2px 9px;font-size:10.5px;color:#6b7089}
-.rx-post-card{display:block;padding:22px 24px;border:1px solid hsl(var(--border));border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(13,14,21,.04);transition:border-color .2s,transform .2s,box-shadow .2s}
+a.rx-post-card{display:block;padding:22px 24px;border:1px solid hsl(var(--border));border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(13,14,21,.04);transition:border-color .2s,transform .2s,box-shadow .2s;text-decoration:none}
 .rx-post-card:hover{border-color:#a5b4fc;transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,70,229,.08)}
 .rx-post-card h2{font-size:21px;font-weight:600;color:#1c1f2e;margin:0}
 .rx-versions{font-size:14px;color:#6b7089;padding:12px 16px;background:#f4f5fb;border:1px solid hsl(var(--border));border-radius:10px}
@@ -411,7 +404,6 @@ function indexPage(cfg: Config): string {
       <p>${p.summary}</p>
       <div class="rx-post-meta">
         <span>${fmtDate(p.date)}</span><span>·</span><span>${p.readingMinutes} min read</span>
-        ${p.tags.map((t) => `<span class="rx-tag">${t}</span>`).join("")}
       </div>
     </a>`
   ).join("\n");
