@@ -124,7 +124,7 @@ function clients(): Client[] {
         // into the ONE directory install happened to run in.
         const args = ["mcp", "add", "--scope", "user", SERVER_NAME];
         for (const [k, v] of Object.entries(env)) args.push("-e", `${k}=${v}`);
-        args.push("--", "npx", "roam402-mcp");
+        args.push("--", "npx", "-y", "roam402-mcp");
         try {
           execFileSync("claude", args, { stdio: "pipe" });
           return "added via `claude mcp add`";
@@ -142,7 +142,7 @@ function clients(): Client[] {
       where: desktop,
       // The app may be installed before it has ever written a config.
       detect: () => existsSync(desktop) || existsSync(dirname(desktop)),
-      apply: (env) => mergeJsonConfig(desktop, { command: "npx", args: ["roam402-mcp"], env }),
+      apply: (env) => mergeJsonConfig(desktop, { command: "npx", args: ["-y", "roam402-mcp"], env }),
     },
     {
       id: "cursor",
@@ -150,7 +150,7 @@ function clients(): Client[] {
       label: "Cursor",
       where: cursor,
       detect: () => existsSync(cursor) || hasCommand("cursor"),
-      apply: (env) => mergeJsonConfig(cursor, { command: "npx", args: ["roam402-mcp"], env }),
+      apply: (env) => mergeJsonConfig(cursor, { command: "npx", args: ["-y", "roam402-mcp"], env }),
     },
     {
       id: "codex",
@@ -172,7 +172,7 @@ function clients(): Client[] {
         const block =
           `\n[mcp_servers.${SERVER_NAME}]\n` +
           `command = "npx"\n` +
-          `args = ["roam402-mcp"]\n` +
+          `args = ["-y", "roam402-mcp"]\n` +
           (envLines ? `\n[mcp_servers.${SERVER_NAME}.env]\n${envLines}\n` : "");
         mkdirSync(dirname(codex), { recursive: true });
         backup(codex);
@@ -183,9 +183,25 @@ function clients(): Client[] {
   ];
 }
 
-/** The env every client entry carries. */
+/**
+ * The env every client entry carries.
+ *
+ * The npm_config_* entries are not decoration. An agent host launches this
+ * through npx, and npx re-resolves against the registry on EVERY launch — even
+ * with the package already cached, even pinned. With the network down that
+ * means npm's default backoff (10s + 60s) runs before the server starts, so a
+ * warm, working install sits silent for ~72 seconds and the host reports a
+ * dead server. Measured: 71.9s with defaults, 2.75s with one short retry, and
+ * an honest failure in 336ms on a cold cache instead of 70s of nothing.
+ * MCP config only exposes command/args/env, so this is the only lever we have.
+ */
 function serverEnv(network: RoamNetwork): Record<string, string> {
-  const env: Record<string, string> = { ROAM_NETWORK: network };
+  const env: Record<string, string> = {
+    ROAM_NETWORK: network,
+    npm_config_fetch_retries: "1",
+    npm_config_fetch_retry_mintimeout: "1000",
+    npm_config_fetch_retry_maxtimeout: "2000",
+  };
   // Absolute, because another process expands it, not your shell.
   const key = defaultKeyPath(network);
   if (existsSync(key)) env.ROAM_MNEMONIC_FILE = key;
@@ -196,7 +212,7 @@ export function configSnippetFor(network: RoamNetwork): string {
   return JSON.stringify(
     {
       mcpServers: {
-        [SERVER_NAME]: { command: "npx", args: ["roam402-mcp"], env: serverEnv(network) },
+        [SERVER_NAME]: { command: "npx", args: ["-y", "roam402-mcp"], env: serverEnv(network) },
       },
     },
     null,

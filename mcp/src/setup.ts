@@ -29,7 +29,7 @@ const OK = (s: string) => `\u001b[32m${s}\u001b[0m`;
 
 function configSnippet(env: Record<string, string>): string {
   return JSON.stringify(
-    { mcpServers: { roam402: { command: "npx", args: ["roam402-mcp"], env } } },
+    { mcpServers: { roam402: { command: "npx", args: ["-y", "roam402-mcp"], env } } },
     null,
     2
   );

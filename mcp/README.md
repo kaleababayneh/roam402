@@ -10,7 +10,7 @@ config block, no code.
   "mcpServers": {
     "roam402": {
       "command": "npx",
-      "args": ["roam402-mcp"],
+      "args": ["-y", "roam402-mcp"],
       "env": {
         "ROAM_MNEMONIC": "…25-word Algorand mnemonic…",
         "ROAM_NETWORK": "mainnet"
