@@ -75,6 +75,9 @@ ${DIM(
       configSnippet({ ROAM_MNEMONIC_FILE: keyPath(network), ROAM_NETWORK: network })
     )}
 
+${DIM("(or skip the JSON entirely: put your words in the file below, then run")}
+${DIM("npx roam402-mcp install)")}
+
 …and put the 25 words in that file, readable only by you:
 
   ${B(`mkdir -p ${KEY_DIR} && umask 077 && cat > ${keyPath(network)}`)}
@@ -133,11 +136,14 @@ ${B("To fund it")} (${network}) ${DIM("— this order matters on Algorand:")}
 
   ${DIM("Check progress at any time with")} ${B("npx roam402-mcp --status")}
 
-${B("Add this to your agent host's MCP config:")}
+${B("Now connect it to your agent")} — no JSON to edit:
 
-${configSnippet({ ROAM_MNEMONIC_FILE: stored ?? keyPath(network), ROAM_NETWORK: network })}
+       ${B("npx roam402-mcp install")}
 
-${OK("Done.")} Restart your agent host and ask it: "what can I buy through roam402?"
+     ${DIM("Detects Claude Code, Claude Desktop, Cursor and Codex, and wires this")}
+     ${DIM("server into each. Existing servers are left alone and backed up.")}
+
+${OK("Done.")} Restart your agent and ask it: "what can I buy through roam402?"
 `);
     return true;
   } finally {

@@ -22,6 +22,18 @@ config block, no code.
 
 | Tool | Cost | What it does |
 |---|---|---|
+### Connecting it to your agent
+
+```
+npx roam402-mcp install            # detects Claude Code, Claude Desktop, Cursor, Codex
+npx roam402-mcp install --client cursor   # or pick one
+```
+
+It merges into each client's own config format — never clobbering servers you
+already have, backing up every file it touches, and doing nothing on a re-run.
+Prefer to do it by hand? `npx roam402-mcp install` prints the JSON if it finds
+no client, and declining the prompt prints it too.
+
 ### Setting up a wallet (no wallet app needed)
 
 ```

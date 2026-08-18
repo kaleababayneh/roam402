@@ -28,6 +28,7 @@ import { createRoamClient, signerFromMnemonic } from "roam402";
 import { loadMcpConfig, mnemonicProblem } from "./config.js";
 import { registerTools } from "./tools.js";
 import { runSetupWizard } from "./setup.js";
+import { runInstall } from "./install.js";
 import { optInToUsdc, walletStatus } from "./wallet.js";
 
 const cfg = loadMcpConfig(process.env);
@@ -39,6 +40,8 @@ if (flag("--help", "-h")) {
 
   npx roam402-mcp              start the MCP server (or set up a wallet, if run
                                in a terminal with none configured)
+  npx roam402-mcp install      wire this server into Claude Code, Claude Desktop,
+                               Cursor or Codex — no JSON to hand-edit
   npx roam402-mcp --status     address, ALGO/USDC balance, USDC opt-in state
   npx roam402-mcp --optin      opt this wallet in to USDC — REQUIRED once before
                                it can receive any. Needs ~0.21 ALGO first.
@@ -48,6 +51,17 @@ Wallet:  ROAM_MNEMONIC_FILE=<path to a file holding 25 words>   (preferred)
          ROAM_MNEMONIC="<25 words>"
 Network: ROAM_NETWORK=mainnet|testnet   (default mainnet)`);
   process.exit(0);
+}
+
+if (argv[0] === "install") {
+  const at = argv.indexOf("--client");
+  process.exit(
+    await runInstall({
+      network: cfg.network,
+      only: at > -1 ? argv[at + 1] : undefined,
+      yes: flag("--yes", "-y"),
+    })
+  );
 }
 
 // --status / --optin are the reason these exist as CLI commands: a wallet must
@@ -105,7 +119,7 @@ if (cfg.mnemonic) {
 
 const roam = createRoamClient({ signer, network: cfg.network, gatewayUrl: cfg.gatewayUrl });
 
-const server = new McpServer({ name: "roam402", version: "0.2.2" });
+const server = new McpServer({ name: "roam402", version: "0.3.0" });
 registerTools(server, roam, cfg, signer?.address);
 
 await server.connect(new StdioServerTransport());
